@@ -1,0 +1,54 @@
+batch_size: 256
+commit: ea59f68a67bf1c9677bdf652ce3cd969ad4b7862
+datadir: datasets/lichess_180_10800_60_122024_v2/split_11_5_1m_900208
+elo_params:
+  constant_var: false
+  edges:
+  - 1400
+  - 1800
+  - 2000
+  - 2200
+  - 2400
+  - 4000
+  initial_var: 1
+  loss: gaussian_nll
+  predict: true
+  warmup_elo_steps: 0
+  warmup_var_steps: 0
+  weight: 1
+  whiten_params: !!python/tuple
+  - 1611.4598119752316
+  - 357.99739723020036
+lr_scheduler_params:
+  lr: 0.0003
+  min_lr: 3.0e-06
+  name: WarmUpCosine
+  warmup_steps: 25000
+max_steps: 1000000.0
+model_args:
+  dim: 1024
+  elo_pred_size: 2
+  ffn_dim_multiplier: 1.5
+  gaussian_elo: true
+  max_seq_len: 128
+  multiple_of: 256
+  n_elo_heads: 6
+  n_heads: 32
+  n_kv_heads: 8
+  n_layers: 16
+  n_timecontrol_heads: 3
+  norm_eps: 1.0e-05
+  predict_move: true
+  rope_theta: 10000
+  vocab_size: 2048
+opening_moves: 0
+random_seed: 0
+strategy: ddp
+tc_groups:
+  180:
+  - 1000
+  600:
+  - 1000
+  10800:
+  - 1000
+val_check_steps: 25000
