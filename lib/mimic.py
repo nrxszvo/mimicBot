@@ -6,11 +6,10 @@ from chess.engine import PlayResult
 import numpy as np
 import torch
 
-from lib.mimic_config import get_config
+from lib.dual_zero_v04.config import get_config
 from lib.dual_zero_v04.model import ModelArgs, Transformer
 from lib.pgnUtils import STARTMV, BoardState, IllegalMoveException
 from lib import model, lichess
-from xata.client import XataClient
 
 class MimicTestBot:
     def __init__(self):
@@ -88,8 +87,6 @@ class MimicTestBotCore:
         self.whiten_params = cfgyml.elo_params.whiten_params
         model_args = get_model_args(cfgyml)
         self.model = Wrapper(Transformer(model_args))
-
-        db = XataClient()
         cp = torch.load(
             os.path.join(dn, "dual_zero_v04", "weights.ckpt"),
             map_location=torch.device("cpu"),

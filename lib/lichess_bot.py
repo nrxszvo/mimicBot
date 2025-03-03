@@ -1,4 +1,5 @@
 """The main module that controls lichess-bot."""
+
 import argparse
 import copy
 import datetime
@@ -9,7 +10,6 @@ import logging
 import logging.handlers
 import math
 import multiprocessing
-import os
 import signal
 import socketserver
 import time
@@ -38,7 +38,7 @@ from rich.logging import RichHandler
 
 from lib.mimic import MimicTestBot
 from lib import lichess, matchmaking, model
-from lib.config import Configuration, load_config, log_config
+from lib.config import Configuration, load_config
 from lib.lichess_types import (
     CONTROL_QUEUE_TYPE,
     LOGGING_QUEUE_TYPE,
@@ -84,6 +84,7 @@ class ServerHandler(http.server.BaseHTTPRequestHandler):
         )  # <--- Gets the size of data
         post_data = self.rfile.read(content_length)  # <--- Gets the data itself
         event = json.loads(post_data.decode("utf-8"))
+        logger.info("post received " + event)
         self.control_queue.put_nowait(event)
 
     def log_message(self, format, *args):
@@ -137,17 +138,18 @@ signal.signal(signal.SIGINT, signal_handler)
 
 
 def watch_control_stream(
-    control_queue: CONTROL_QUEUE_TYPE, li: lichess.Lichess
+    control_queue: CONTROL_QUEUE_TYPE,
+    li: lichess.Lichess,
 ) -> None:
     handler = partial(ServerHandler, control_queue)
-    with socketserver.TCPServer(("localhost", 5001), handler) as server:
+    with socketserver.TCPServer(("0.0.0.0", 443), handler) as server:
+        logger.info("Opened https server")
         server.serve_forever()
 
     control_queue.put_nowait({"type": "terminated", "error": None})
 
 
-def logging_configurer(
-    level: int, filename: Optional[str]) -> None:
+def logging_configurer(level: int, filename: Optional[str]) -> None:
     """
     Configure the logger.
 
@@ -169,7 +171,7 @@ def logging_configurer(
         file_handler.setFormatter(file_formatter)
         file_handler.setLevel(level)
         all_handlers.append(file_handler)
-        
+
     logging.basicConfig(level=logging.DEBUG, handlers=all_handlers, force=True)
 
 
@@ -233,13 +235,6 @@ def start(
     """
     logger.info(f"You're now connected to {config.url} and awaiting challenges.")
     manager = multiprocessing.Manager()
-    challenge_queue: MULTIPROCESSING_LIST_TYPE = manager.list()
-    control_queue: CONTROL_QUEUE_TYPE = manager.Queue()
-    control_stream = multiprocessing.Process(
-        target=watch_control_stream, args=(control_queue, li)
-    )
-    control_stream.start()
-
     logging_queue = manager.Queue()
     logging_listener = multiprocessing.Process(
         target=logging_listener_proc,
@@ -248,6 +243,13 @@ def start(
     logging_listener.start()
 
     thread_logging_configurer(logging_queue)
+
+    challenge_queue: MULTIPROCESSING_LIST_TYPE = manager.list()
+    control_queue: CONTROL_QUEUE_TYPE = manager.Queue()
+    control_stream = multiprocessing.Process(
+        target=watch_control_stream, args=(control_queue, li)
+    )
+    control_stream.start()
 
     try:
         lichess_bot_main(
@@ -598,6 +600,7 @@ def play_game(
     :param challenge_queue: The queue containing the challenges.
     :param logging_queue: The logging queue. Used by `logging_listener_proc`.
     """
+    thread_logging_configurer(logging_queue)
     logger = logging.getLogger(__name__)
 
     response = li.get_game_stream(game_id)
@@ -614,7 +617,6 @@ def play_game(
 
     delay = msec(config.rate_limiting_delay)
 
-    disconnect_time = seconds(0)
     prior_game = None
     board = chess.Board()
     game_stream = itertools.chain([json.dumps(game.state).encode("utf-8")], lines)
@@ -633,9 +635,7 @@ def play_game(
                 game.state = upd
                 board = setup_board(game)
 
-                if not is_game_over(game) and is_engine_move(
-                    game, prior_game, board
-                ):
+                if not is_game_over(game) and is_engine_move(game, prior_game, board):
                     print_move_number(board)
                     move_attempted = True
                     move = engine.play_move(

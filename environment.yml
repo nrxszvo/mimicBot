@@ -1,0 +1,11 @@
+name: base
+  dependencies:
+  - anaconda::python=3.10
+  - anaconda::pyyaml
+  - conda-forge::chess
+  - conda-forge::backoff
+  - anaconda::pip
+  - pip:
+    - --index-url https://download.pytorch.org/whl/cpu
+    - pytorch
+    - ruff
