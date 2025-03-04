@@ -142,7 +142,7 @@ def watch_control_stream(
     li: lichess.Lichess,
 ) -> None:
     handler = partial(ServerHandler, control_queue)
-    with socketserver.TCPServer(("0.0.0.0", 443), handler) as server:
+    with socketserver.TCPServer(("0.0.0.0", 8080), handler) as server:
         logger.info("Opened https server")
         server.serve_forever()
 
