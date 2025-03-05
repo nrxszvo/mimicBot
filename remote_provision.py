@@ -34,7 +34,7 @@ subprocess.call(
     scp("provision.sh", "~")
     + scp("~/.ghtoken", "~")
     + ssh(
-        f"chmod 755 provision.sh; GHTOKEN={token} MYNAME={myname} MYEMAIL={myemail} sh provision.sh"
+        f'"chmod 755 provision.sh; GHTOKEN={token} MYNAME={myname} MYEMAIL={myemail} sh provision.sh"'
     )
     + scp("config.yml", "~/git/mimicBot")
     + scp(

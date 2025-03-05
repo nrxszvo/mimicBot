@@ -413,9 +413,9 @@ class Lichess:
 
     def set_user_agent(self, username: str) -> None:
         """Set the user agent for communication with lichess.org."""
-        self.header.update(
-            {"User-Agent": f"lichess-bot/{self.version} user:{username}"}
-        )
+        self.header.update({
+            "User-Agent": f"lichess-bot/{self.version} user:{username}"
+        })
         self.session.headers.update(self.header)
 
     def get_game_pgn(self, game_id: str) -> str:

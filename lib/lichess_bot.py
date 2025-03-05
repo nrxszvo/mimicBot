@@ -8,7 +8,6 @@ import itertools
 import json
 import logging
 import logging.handlers
-import math
 import multiprocessing
 import signal
 import socketserver
@@ -48,6 +47,7 @@ from lib.lichess_types import (
     UserProfileType,
 )
 from lib.timer import Timer, hours, msec, seconds, to_seconds
+
 
 MULTIPROCESSING_LIST_TYPE = MutableSequence[model.Challenge]
 POOL_TYPE = Pool
@@ -312,7 +312,6 @@ def lichess_bot_main(
 
     all_games = li.get_ongoing_games()
     active_games = {game["gameId"] for game in all_games}
-    low_time_games: list[GameType] = []
 
     last_check_online_time = Timer(hours(1))
     matchmaker = matchmaking.Matchmaking(li, config, user_profile)
@@ -371,12 +370,8 @@ def lichess_bot_main(
                     play_game_args,
                     config,
                     active_games,
-                    low_time_games,
                 )
 
-            start_low_time_games(
-                low_time_games, active_games, max_games, pool, play_game_args
-            )
             accept_challenges(li, challenge_queue, active_games, max_games)
             matchmaker.challenge(active_games, challenge_queue, max_games)
             check_online_status(li, user_profile, last_check_online_time)
@@ -414,20 +409,6 @@ def next_event(control_queue: CONTROL_QUEUE_TYPE) -> EventType:
         logger.debug(f"Event: {event}")
 
     return event
-
-
-def start_low_time_games(
-    low_time_games: list[GameType],
-    active_games: set[str],
-    max_games: int,
-    pool: POOL_TYPE,
-    play_game_args: PlayGameArgsType,
-) -> None:
-    """Start the games based on how much time we have left."""
-    low_time_games.sort(key=lambda g: g.get("secondsLeft", math.inf))
-    while low_time_games and len(active_games) < max_games:
-        game_id = low_time_games.pop(0)["id"]
-        start_game_thread(active_games, game_id, play_game_args, pool)
 
 
 def accept_challenges(
@@ -525,7 +506,6 @@ def start_game(
     play_game_args: PlayGameArgsType,
     config: Configuration,
     active_games: set[str],
-    low_time_games: list[GameType],
 ) -> None:
     """
     Start a game.
@@ -535,7 +515,6 @@ def start_game(
     :param play_game_args: The args passed to `play_game`.
     :param config: The config the bot will use.
     :param active_games: A set of all the games that aren't correspondence games.
-    :param low_time_games: A list of games, in which we don't have much time remaining.
     """
     game_id = event["game"]["id"]
     start_game_thread(active_games, game_id, play_game_args, pool)
