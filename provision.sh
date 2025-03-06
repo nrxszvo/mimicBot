@@ -55,6 +55,7 @@ if [ ! -d /var/www/html/mimicBot ]; then
 	sudo ln -sT ~/git/mimicBot /var/www/html/mimicBot
 fi
 
+sudo cp git/mimicBot/apache.config /etc/apache2/sites-enabled/000-default.conf
 sudo cp git/mimicBot/celeryd /etc/init.d
 sudo chmod 755 /etc/init.d/celeryd
 sudo cp git/mimicBot/celery_config /etc/default/celeryd
