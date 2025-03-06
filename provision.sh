@@ -1,8 +1,14 @@
 #! /bin/bash
-
-sudo apt-get install apache2-dev -y
-sudo apt-get install libapache2-mod-wsgi-py3 -y
+sudo apt-get update
+sudo apt-get install apache2 libapache2-mod-wsgi-py3 -y
+sudo a2ensite default-ssl
+sudo a2enmod ssl
 sudo a2enmod wsgi
+
+vm_hostname="$(curl -H "Metadata-Flavor:Google" \
+http://metadata.google.internal/computeMetadata/v1/instance/name)"
+echo "Page served from: $vm_hostname" | \
+tee /var/www/html/index.html
 
 dpkg -s rabbitmq-server
 if [ $? -eq 1 ]; then 
@@ -13,8 +19,6 @@ if [ $? -eq 1 ]; then
 	sudo systemctl enable rabbitmq-server
 	sudo systemctl start rabbitmq-server
 fi
-
-sudo systemctl restart apache2
 
 sudo apt-get install git tmux python3.11 python3.11-venv -y 
 
@@ -55,8 +59,10 @@ if [ ! -d /var/www/html/mimicBot ]; then
 	sudo ln -sT ~/git/mimicBot /var/www/html/mimicBot
 fi
 
-sudo cp git/mimicBot/apache.config /etc/apache2/sites-enabled/000-default.conf
+sudo cp git/mimicBot/apache.conf /etc/apache2/sites-enabled/000-default.conf
+sudo cp git/mimicBot/celery.conf /etc/default/celeryd
 sudo cp git/mimicBot/celeryd /etc/init.d
 sudo chmod 755 /etc/init.d/celeryd
-sudo cp git/mimicBot/celery_config /etc/default/celeryd
 sudo /etc/init.d/celeryd start
+
+sudo systemctl restart apache2
