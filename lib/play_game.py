@@ -4,8 +4,9 @@ from requests.exceptions import (
     ReadTimeout,
     ConnectionError,
 )
-
+from collections import defaultdict
 from chess.variant import find_variant
+import multiprocessing
 from http.client import RemoteDisconnected
 from lib import model, lichess
 from lib.timer import to_seconds, seconds, msec
@@ -93,7 +94,16 @@ def should_exit_game(
     return False
 
 
-def play_game(game_id: str, li: lichess.Lichess, config, username: str) -> None:
+manager = multiprocessing.Manager()
+engines = manager.list()
+
+
+def play_game(
+    game_id: str,
+    li: lichess.Lichess,
+    config,
+    username: str,
+) -> None:
     logger = logging.getLogger(__name__)
 
     response = li.get_game_stream(game_id)
@@ -105,7 +115,15 @@ def play_game(game_id: str, li: lichess.Lichess, config, username: str) -> None:
     abort_time = seconds(config.abort_time)
     game = model.Game(initial_state, username, li.baseUrl, abort_time)
 
-    engine = MimicTestBot()
+    for eng in engines:
+        if eng["inactive"]:
+            engine = eng
+            engine["inactive"] = False
+            break
+    else:
+        engine = {"inactive": False, "handle": MimicTestBot()}
+        engines.append(engine)
+
     logger.info(f"+++ {game}")
 
     delay = msec(config.rate_limiting_delay)
@@ -125,7 +143,7 @@ def play_game(game_id: str, li: lichess.Lichess, config, username: str) -> None:
 
                 if not is_game_over(game) and is_engine_move(game, prior_game, board):
                     move_attempted = True
-                    move = engine.play_move(
+                    move = engine["handle"].play_move(
                         board,
                         game,
                         li,
@@ -149,15 +167,27 @@ def play_game(game_id: str, li: lichess.Lichess, config, username: str) -> None:
                 move_attempted or game_is_active(li, game.id)
             )
 
+    engine["handle"].reset()
+    engine["inactive"] = True
     logger.info(f"--- {game.url()} Game over")
 
 
-def handle_challenge(event, li: lichess.Lichess, user_profile) -> None:
-    """Handle incoming challenges. It either accepts, declines, or queues them to accept later."""
-    chlng = model.Challenge(event["challenge"], user_profile)
-    if chlng.from_self:
-        return
-    try:
-        li.accept_challenge(chlng.id)
-    except (HTTPError, ReadTimeout):
-        pass
+def handle_challenge(event, li: lichess.Lichess, config, user_profile) -> None:
+    if len(li.get_ongoing_games()) < config.concurrency:
+        chlng = model.Challenge(event["challenge"], user_profile)
+        if chlng.from_self:
+            return
+        is_supported, decline_reason = chlng.is_supported(
+            config, defaultdict(list), defaultdict(lambda: 0)
+        )
+    else:
+        is_supported = False
+        decline_reason = "later"
+
+    if is_supported:
+        try:
+            li.accept_challenge(chlng.id)
+        except (HTTPError, ReadTimeout):
+            pass
+    else:
+        li.decline_challenge(chlng.id, reason=decline_reason)

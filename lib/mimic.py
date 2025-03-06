@@ -11,18 +11,10 @@ from lib.dual_zero_v04.model import ModelArgs, Transformer
 from lib.pgnUtils import STARTMV, BoardState, IllegalMoveException
 from lib import model, lichess
 
+
 class MimicTestBot:
     def __init__(self):
         self.core = MimicTestBotCore()
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        pass
-
-    def get_pid(self):
-        return "?"
 
     def play_move(
         self,
@@ -30,14 +22,6 @@ class MimicTestBot:
         game: model.Game,
         li: lichess.Lichess,
     ) -> None:
-        """
-        Play a move.
-
-        :param board: The current position.
-        :param game: The game that the bot is playing.
-        :param li: Provides communication with lichess.org.
-        :return: The move to play.
-        """
         best_move = self.search(board)
         li.make_move(game.id, best_move)
         return best_move
@@ -50,11 +34,10 @@ class MimicTestBot:
         return PlayResult(mv, None, info=elo_preds)
 
 
-
 class Wrapper(torch.nn.Module):
-    def __init__(self, model):
+    def __init__(self, ptmodel):
         super().__init__()
-        self.model = model
+        self.model = ptmodel
 
     def forward(self, inp):
         return self.model(inp)
@@ -72,9 +55,9 @@ def get_model_args(cfgyml):
             model_args.elo_pred_size = 1
         else:
             raise Exception("did not recognize loss function name")
-    model_args.n_timecontrol_heads = len(
-        [n for _, grp in cfgyml.tc_groups.items() for n in grp]
-    )
+    model_args.n_timecontrol_heads = len([
+        n for _, grp in cfgyml.tc_groups.items() for n in grp
+    ])
     return model_args
 
 
@@ -94,9 +77,11 @@ class MimicTestBotCore:
         )
         self.model.load_state_dict(cp)
         self.model.eval()
+        self.reset()
+
+    def reset(self):
         self.board = BoardState()
         self.inp = torch.tensor([[STARTMV]], dtype=torch.int32)
-        self.ms = []
 
     def _add_move(self, mvid):
         mv = torch.tensor([[mvid]], dtype=torch.int32)
