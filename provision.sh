@@ -56,5 +56,6 @@ if [ ! -d /var/www/html/mimicBot ]; then
 fi
 
 sudo cp git/mimicBot/celeryd /etc/init.d
-sudo cp got/mimicBot/celery_config /etc/default/celeryd
+sudo chmod 755 /etc/init.d/celeryd
+sudo cp git/mimicBot/celery_config /etc/default/celeryd
 sudo /etc/init.d/celeryd start
