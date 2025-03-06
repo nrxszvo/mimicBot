@@ -9,29 +9,19 @@ cd ${HOME}
 sudo apt-get install apache2-dev -y
 sudo apt-get install libapache2-mod-wsgi-py3 -y
 sudo a2enmod wsgi
+
 sudo apt-get install curl gnupg -y
 curl -fsSL https://packages.rabbitmq.com/gpg | sudo apt-key add -
 sudo add-apt-repository 'deb https://dl.bintray.com/rabbitmq/debian focal main'
 sudo apt update && sudo apt install rabbitmq-server -y
 sudo systemctl enable rabbitmq-server
 sudo systemctl start rabbitmq-server
+
 sudo systemctl restart apache2
-sudo apt-get install git -y 
 
-if [ ! -d "${CONDA_DIR}" ]; then
-    echo "installing conda..."
-    curl -LO "http://repo.continuum.io/miniconda/Miniconda3-${CONDA_VER}-Linux-${OS_TYPE}.sh"
-    bash Miniconda3-${CONDA_VER}-Linux-${OS_TYPE}.sh -p ${HOME}/miniconda -b
-    rm Miniconda3-${CONDA_VER}-Linux-${OS_TYPE}.sh
-fi
+sudo apt-get install git tmux python3 -y 
 
-if ! command -v conda 2>&1 >/dev/null
-then
-    export PATH=${HOME}/miniconda/bin:${PATH}
-fi
-
-conda update -y conda
-conda init
+echo "set -g mouse on" > ${HOME}/.tmux.conf
 
 if [ ! -d "${HOME}/git" ]; then
     mkdir ${HOME}/git
@@ -52,6 +42,9 @@ if [ ! -d "${HOME}/git/mimicBot" ]; then
     cd ${HOME}
 fi
 
-conda env update --file=git/mimicBot/environment.yml
+cd git/mimicBot
+python3 -m venv venv
+venv/bin/activate
+pip install -r requirements.txt
 
-
+sudo ln -sT ~/git/mimicBot /var/www/html/mimicBot
