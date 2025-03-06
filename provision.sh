@@ -6,6 +6,18 @@ CONDA_DIR=${HOME}/miniconda
 PY_VER=3.10
 cd ${HOME}
 
+sudo apt-get install apache2-dev -y
+sudo apt-get install libapache2-mod-wsgi-py3 -y
+sudo a2enmod wsgi
+sudo apt-get install curl gnupg -y
+curl -fsSL https://packages.rabbitmq.com/gpg | sudo apt-key add -
+sudo add-apt-repository 'deb https://dl.bintray.com/rabbitmq/debian focal main'
+sudo apt update && sudo apt install rabbitmq-server -y
+sudo systemctl enable rabbitmq-server
+sudo systemctl start rabbitmq-server
+sudo systemctl restart apache2
+sudo apt-get install git -y 
+
 if [ ! -d "${CONDA_DIR}" ]; then
     echo "installing conda..."
     curl -LO "http://repo.continuum.io/miniconda/Miniconda3-${CONDA_VER}-Linux-${OS_TYPE}.sh"
@@ -25,7 +37,6 @@ if [ ! -d "${HOME}/git" ]; then
     mkdir ${HOME}/git
 fi
 
-sudo apt-get -y install git
 if [ ! -d "${HOME}/git/mimicBot" ]; then
     cd git
     git clone "https://${GHTOKEN}@github.com/nrxszvo/mimicBot.git"
@@ -43,13 +54,4 @@ fi
 
 conda env update --file=git/mimicBot/environment.yml
 
-sudo apt-get update
-sudo apt-get -y install apache2
-sudo 2ensite default-ssl
-sudo a2enmod ssl
-vm_hostname="$(curl -H "Metadata-Flavor:Google" \
-http://metadata.google.internal/computeMetadata/v1/instance/name)"
-echo "mimicBot server: $vm_hostname" | \
-tee /var/www/html/index.html
-sudo systemctl restart apache2
 
