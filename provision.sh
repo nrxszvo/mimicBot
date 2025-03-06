@@ -1,25 +1,22 @@
 #! /bin/bash
 
-CONDA_VER=latest
-OS_TYPE=x86_64
-CONDA_DIR=${HOME}/miniconda
-PY_VER=3.10
-cd ${HOME}
-
 sudo apt-get install apache2-dev -y
 sudo apt-get install libapache2-mod-wsgi-py3 -y
 sudo a2enmod wsgi
 
-sudo apt-get install curl gnupg -y
-curl -fsSL https://packages.rabbitmq.com/gpg | sudo apt-key add -
-sudo add-apt-repository 'deb https://dl.bintray.com/rabbitmq/debian focal main'
-sudo apt update && sudo apt install rabbitmq-server -y
-sudo systemctl enable rabbitmq-server
-sudo systemctl start rabbitmq-server
+dpkg -s rabbitmq-server
+if [ $? -eq 1 ]; then 
+	sudo apt-get install curl gnupg -y
+	curl -fsSL https://packages.rabbitmq.com/gpg | sudo apt-key add -
+	sudo add-apt-repository 'deb https://dl.bintray.com/rabbitmq/debian focal main'
+	sudo apt update && sudo apt install rabbitmq-server -y
+	sudo systemctl enable rabbitmq-server
+	sudo systemctl start rabbitmq-server
+fi
 
 sudo systemctl restart apache2
 
-sudo apt-get install git tmux python3 -y 
+sudo apt-get install git tmux python3.11 python3.11-venv -y 
 
 echo "set -g mouse on" > ${HOME}/.tmux.conf
 
@@ -40,11 +37,24 @@ if [ ! -d "${HOME}/git/mimicBot" ]; then
         git config --global user.email ${MYEMAIL}
     fi
     cd ${HOME}
+else
+	cd git/mimicBot
+	git pull
+	cd ${HOME}
 fi
 
-cd git/mimicBot
-python3 -m venv venv
-venv/bin/activate
-pip install -r requirements.txt
+if [ ! -d "${HOME}/git/mimicBot/venv" ]; then
+	cd git/mimicBot
+	python3 -m venv venv
+	venv/bin/activate
+	pip install -r requirements.txt
+	cd ${HOME}
+fi
 
-sudo ln -sT ~/git/mimicBot /var/www/html/mimicBot
+if [ ! -d /var/www/html/mimicBot ]; then
+	sudo ln -sT ~/git/mimicBot /var/www/html/mimicBot
+fi
+
+sudo cp git/mimicBot/celeryd /etc/init.d
+sudo cp got/mimicBot/celery_config /etc/default/celeryd
+sudo /etc/init.d/celeryd start

@@ -1,15 +1,20 @@
-from celery import shared_task
-from flask_factory import celery_init_app
-from flask import Flask, request
-from flask_cors import CORS
-from lib import lichess
-from lib.config import load_config
-import yaml
 import logging
 import os
-from lib.play_game import play_game as call_play_game, handle_challenge
+import pathlib
 
-with open("lib/versioning.yml") as version_file:
+import yaml
+from celery import shared_task
+from flask import Flask, request
+from flask_cors import CORS
+
+from flask_factory import celery_init_app
+from lib import lichess
+from lib.config import load_config
+from lib.play_game import handle_challenge
+from lib.play_game import play_game as call_play_game
+
+dn = pathlib.Path(__file__).parent.resolve()
+with open(os.path.join(dn, "lib", "versioning.yml")) as version_file:
     versioning_info = yaml.safe_load(version_file)
 
 __version__ = versioning_info["lichess_bot_version"]
@@ -27,7 +32,7 @@ app.config.from_mapping(
 app.config.from_prefixed_env()
 celery_app = celery_init_app(app)
 
-CONFIG = load_config("./config.yml")
+CONFIG = load_config(os.path.join(dn, "config.yml"))
 logging_level = logging.INFO
 max_retries = CONFIG.engine.online_moves.max_retries
 max_games = CONFIG.challenge.concurrency
