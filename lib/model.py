@@ -119,23 +119,11 @@ class Challenge:
 
             decline_reason = (
                 self.decline_due_to(
-                    config.accept_bot or not self.challenger.is_bot, "noBot"
-                )
-                or self.decline_due_to(
-                    not config.only_bot or self.challenger.is_bot, "onlyBot"
-                )
-                or self.decline_due_to(
                     self.is_supported_time_control(config), "timeControl"
                 )
                 or self.decline_due_to(self.is_supported_variant(config), "variant")
                 or self.decline_due_to(
                     self.is_supported_mode(config), "casual" if self.rated else "rated"
-                )
-                or self.decline_due_to(
-                    self.challenger.name not in config.block_list, "generic"
-                )
-                or self.decline_due_to(
-                    self.is_supported_recent(config, recent_bot_challenges), "later"
                 )
                 or self.decline_due_to(
                     players_with_active_games[self.challenger.name]
