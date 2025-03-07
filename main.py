@@ -59,7 +59,7 @@ def parse_request():
 
 @app.get("/gameStart/<gameId>")
 def gameStart(gameId):
-    play_game.delay(gameId)
+    handle_play_game.delay(gameId)
     return {"state": "received gameStart"}
 
 
