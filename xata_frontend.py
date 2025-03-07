@@ -56,5 +56,5 @@ if __name__ == "__main__":
         with open(fn, "rb") as f:
             mdl = b64decode(f.read())
         os.remove(fn)
-        with open("weights.ckpt", "wb") as f:
+        with open(os.path.join(args.model_dir, "weights.ckpt"), "wb") as f:
             f.write(mdl)
