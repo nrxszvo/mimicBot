@@ -8,5 +8,6 @@ numpy
 pyyaml
 chess
 backoff
+xata
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch

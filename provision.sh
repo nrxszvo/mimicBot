@@ -47,18 +47,25 @@ else
 	cd ${HOME}
 fi
 
+cd git/mimicBot
 if [ ! -d "${HOME}/git/mimicBot/venv" ]; then
-	cd git/mimicBot
 	python3 -m venv venv
 	venv/bin/activate
 	pip install -r requirements.txt
-	cd ${HOME}
+else
+	venv/bin/activate
+fi
+cd ${HOME}
+
+cd git/mimicBot 
+python3 xata_frontend.py --download_cfg --cfg_id default
+if [ ! -f "lib/dual_zero_v04/weights.ckpt" ]; then
+	python3 xata_frontend.py --download_model --model_dir lib/dual_zero_v04 --model_id dual_zero_v04
 fi
 
 if [ ! -d /var/www/html/mimicBot ]; then
 	sudo ln -sT ~/git/mimicBot /var/www/html/mimicBot
 fi
-
 sudo cp git/mimicBot/apache.conf /etc/apache2/sites-enabled/000-default.conf
 sudo cp git/mimicBot/celery.conf /etc/default/celeryd
 sudo cp git/mimicBot/celeryd /etc/init.d

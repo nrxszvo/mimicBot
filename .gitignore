@@ -2,3 +2,6 @@ __pycache__/
 run_remote.sh
 *ckpt
 config.yml
+
+
+.env
