@@ -53,7 +53,7 @@ def say_hello():
 @app.post("/challenge")
 def parse_request():
     msg = request.json
-    handle_challenge(msg, li, config, user_profile)
+    handle_challenge(msg, li, config.challenge, user_profile)
     return {"state": "received challenge"}
 
 

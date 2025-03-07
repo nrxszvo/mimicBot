@@ -6,7 +6,6 @@ from requests.exceptions import (
 )
 from collections import defaultdict
 from chess.variant import find_variant
-import multiprocessing
 from http.client import RemoteDisconnected
 from lib import model, lichess
 from lib.timer import to_seconds, seconds, msec
