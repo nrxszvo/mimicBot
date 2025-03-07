@@ -10,15 +10,14 @@ from flask_cors import CORS
 from flask_factory import celery_init_app
 from lib import lichess
 from lib.play_game import handle_challenge, play_game
-import multiprocessing
+from lib.dual_zero_v04.config import get_config
 
 dn = pathlib.Path(__file__).parent.resolve()
 with open(os.path.join(dn, "lib", "versioning.yml")) as version_file:
     versioning_info = yaml.safe_load(version_file)
 __version__ = versioning_info["lichess_bot_version"]
 
-with open(os.path.join(dn, "config.yml")) as cfg_file:
-    config = yaml.safe_load(cfg_file)
+config = get_config(os.path.join(dn, "config.yml"))
 
 # app = create_app()
 app = Flask(__name__)

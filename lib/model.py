@@ -7,7 +7,6 @@ from collections import Counter, defaultdict
 from enum import Enum
 from urllib.parse import urljoin
 
-from lib.config import Configuration
 from lib.lichess_types import ChallengeType, GameEventType, PlayerType, UserProfileType
 from lib.timer import Timer, msec, sec_str, seconds, to_msec, to_seconds, years
 
@@ -37,11 +36,11 @@ class Challenge:
         self.color = color if color != "random" else challenge_info["finalColor"]
         self.time_control = challenge_info["timeControl"]
 
-    def is_supported_variant(self, challenge_cfg: Configuration) -> bool:
+    def is_supported_variant(self, challenge_cfg) -> bool:
         """Check whether the variant is supported."""
         return self.variant in challenge_cfg.variants
 
-    def is_supported_time_control(self, challenge_cfg: Configuration) -> bool:
+    def is_supported_time_control(self, challenge_cfg) -> bool:
         """Check whether the time control is supported."""
         speeds = challenge_cfg.time_controls
         increment_max: int = challenge_cfg.max_increment
@@ -74,13 +73,13 @@ class Challenge:
             # Unlimited game
             return days_max == math.inf
 
-    def is_supported_mode(self, challenge_cfg: Configuration) -> bool:
+    def is_supported_mode(self, challenge_cfg) -> bool:
         """Check whether the mode is supported."""
         return ("rated" if self.rated else "casual") in challenge_cfg.modes
 
     def is_supported_recent(
         self,
-        config: Configuration,
+        config,
         recent_bot_challenges: defaultdict[str, list[Timer]],
     ) -> bool:
         """Check whether we have played a lot of games with this opponent recently. Only used when the opponent is a BOT."""
@@ -109,7 +108,7 @@ class Challenge:
 
     def is_supported(
         self,
-        config: Configuration,
+        config,
         recent_bot_challenges: defaultdict[str, list[Timer]],
         players_with_active_games: Counter[str],
     ) -> tuple[bool, str]:

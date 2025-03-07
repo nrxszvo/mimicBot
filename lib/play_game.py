@@ -94,10 +94,6 @@ def should_exit_game(
     return False
 
 
-manager = multiprocessing.Manager()
-engines = manager.list()
-
-
 def play_game(
     game_id: str,
     li: lichess.Lichess,
@@ -115,15 +111,7 @@ def play_game(
     abort_time = seconds(config.abort_time)
     game = model.Game(initial_state, username, li.baseUrl, abort_time)
 
-    for eng in engines:
-        if eng["inactive"]:
-            engine = eng
-            engine["inactive"] = False
-            break
-    else:
-        engine = {"inactive": False, "handle": MimicTestBot()}
-        engines.append(engine)
-
+    engine = MimicTestBot()
     logger.info(f"+++ {game}")
 
     delay = msec(config.rate_limiting_delay)
@@ -143,7 +131,7 @@ def play_game(
 
                 if not is_game_over(game) and is_engine_move(game, prior_game, board):
                     move_attempted = True
-                    move = engine["handle"].play_move(
+                    move = engine.play_move(
                         board,
                         game,
                         li,
@@ -167,8 +155,6 @@ def play_game(
                 move_attempted or game_is_active(li, game.id)
             )
 
-    engine["handle"].reset()
-    engine["inactive"] = True
     logger.info(f"--- {game.url()} Game over")
 
 
