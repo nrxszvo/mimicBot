@@ -27,7 +27,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
     xata = XataClient()
 
-    if args.download_cfg:
+    if args.upload_cfg:
+        assert args.cfg_id, "cfg_id is required"
+        with open(os.path.join(args.cfg_dir, "config.yml")) as f:
+            cfg = f.read()
+        rec = xata.records().upsert("config", args.cfg_id, {"config": cfg})
+        print(rec)
+    elif args.download_cfg:
         assert args.cfg_id, "cfg_id required"
         rec = xata.records().get("config", args.cfg_id, columns=["config"])
         with open(os.path.join(args.cfg_dir, "config.yml"), "w") as f:
