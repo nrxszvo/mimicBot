@@ -117,9 +117,6 @@ class Challenge:
             if self.from_self:
                 return True, ""
 
-            allowed_opponents: list[str] = list(filter(None, config.allow_list)) or [
-                self.challenger.name
-            ]
             decline_reason = (
                 self.decline_due_to(
                     config.accept_bot or not self.challenger.is_bot, "noBot"
@@ -136,9 +133,6 @@ class Challenge:
                 )
                 or self.decline_due_to(
                     self.challenger.name not in config.block_list, "generic"
-                )
-                or self.decline_due_to(
-                    self.challenger.name in allowed_opponents, "generic"
                 )
                 or self.decline_due_to(
                     self.is_supported_recent(config, recent_bot_challenges), "later"
