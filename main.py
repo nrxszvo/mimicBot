@@ -40,7 +40,7 @@ li = lichess.Lichess(config.token, config.url, __version__, logging_level, max_r
 user_profile = li.get_profile()
 
 
-@shared_task(ignore_result=False)
+@shared_task(ignore_result=False, time_limit=30 * 60)
 def handle_play_game(game_id: str):
     play_game(game_id, li, config, user_profile["username"])
 
@@ -51,16 +51,16 @@ def say_hello():
 
 
 @app.post("/challenge")
-def parse_request():
+def incoming_challenge():
     msg = request.json
     handle_challenge(msg, li, config.challenge, user_profile)
-    return {"state": "received challenge"}
+    return {"bot-server": "received challenge"}
 
 
 @app.get("/gameStart/<gameId>")
 def gameStart(gameId):
     handle_play_game.delay(gameId)
-    return {"state": "received gameStart"}
+    return {"bot-server": "received gameStart"}
 
 
 if __name__ == "__main__":
