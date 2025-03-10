@@ -7,7 +7,7 @@ from celery import shared_task
 from flask import Flask, request
 from flask_cors import CORS
 
-from flask_factory import celery_init_app
+from flask_factory import create_app
 from lib import lichess
 from lib.play_game import handle_challenge, play_game
 from lib.dual_zero_v04.config import get_config
@@ -19,18 +19,19 @@ __version__ = versioning_info["lichess_bot_version"]
 
 config = get_config(os.path.join(dn, "config.yml"))
 
-# app = create_app()
-app = Flask(__name__)
-CORS(app)
-app.config.from_mapping(
-    CELERY=dict(
-        broker_url="pyamqp://localhost",
-        result_backend="rpc://localhost",
-        task_ignore_result=True,
-    ),
-)
-app.config.from_prefixed_env()
-celery_app = celery_init_app(app)
+app = create_app()
+# app = Flask(__name__)
+# CORS(app)
+# app.config.from_mapping(
+#    CELERY=dict(
+#        broker_url="pyamqp://localhost",
+#        result_backend="rpc://localhost",
+#        task_ignore_result=True,
+#    ),
+# )
+# app.config.from_prefixed_env()
+# celery_app = celery_init_app(app)
+celery_app = app.extensions["celery"]
 
 logging_level = logging.INFO
 max_retries = config.engine.online_moves.max_retries

@@ -127,7 +127,7 @@ def play_game(
             if u_type == "gameState":
                 game.state = upd
                 board = setup_board(game)
-
+                logger.info(f"{game_id}: {board}")
                 if not is_game_over(game) and is_engine_move(game, prior_game, board):
                     move_attempted = True
                     move = engine.play_move(
