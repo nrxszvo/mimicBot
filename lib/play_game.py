@@ -127,7 +127,7 @@ def play_game(
             if u_type == "gameState":
                 game.state = upd
                 board = setup_board(game)
-                logger.info(f"{game_id}: {board}")
+                logger.info(f"{game_id}:\n{board}")
                 if not is_game_over(game) and is_engine_move(game, prior_game, board):
                     move_attempted = True
                     move = engine.play_move(
@@ -140,6 +140,7 @@ def play_game(
 
                 prior_game = copy.deepcopy(game)
             elif u_type == "ping" and should_exit_game(board, game, prior_game, li):
+                logger.info("should_exit_game returned true")
                 stay_in_game = False
         except (
             HTTPError,
@@ -152,6 +153,9 @@ def play_game(
             stopped = isinstance(e, StopIteration)
             stay_in_game = not stopped and (
                 move_attempted or game_is_active(li, game.id)
+            )
+            logger.info(
+                f"exception caught: {e}, stopped = {stopped}, stay_in_game = {stay_in_game}"
             )
 
     logger.info(f"--- {game.url()} Game over")
