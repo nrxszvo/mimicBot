@@ -157,7 +157,7 @@ def play_game(
             logger.info(
                 f"exception caught: {e}, stopped = {stopped}, stay_in_game = {stay_in_game}"
             )
-
+    tell_user_game_result(game, board)
     logger.info(f"--- {game.url()} Game over")
 
 
@@ -180,3 +180,60 @@ def handle_challenge(event, li: lichess.Lichess, config, user_profile) -> None:
             pass
     else:
         li.decline_challenge(chlng.id, reason=decline_reason)
+
+
+def tell_user_game_result(game: model.Game, board: chess.Board) -> None:
+    """Log the game result."""
+
+    logger = logging.getLogger(__name__)
+    winner = game.state.get("winner")
+    termination = game.state.get("status")
+
+    winning_name = game.white.name if winner == "white" else game.black.name
+    losing_name = game.white.name if winner == "black" else game.black.name
+
+    if winner is not None:
+        logger.info(f"{winning_name} won!")
+    elif termination in [model.Termination.DRAW, model.Termination.TIMEOUT]:
+        logger.info("Game ended in a draw.")
+    else:
+        logger.info("Game adjourned.")
+
+    simple_endings: dict[str, str] = {
+        model.Termination.MATE: "Game won by checkmate.",
+        model.Termination.RESIGN: f"{losing_name} resigned.",
+        model.Termination.ABORT: "Game aborted.",
+    }
+
+    if termination in simple_endings:
+        logger.info(simple_endings[termination])
+    elif termination == model.Termination.DRAW:
+        draw_results = [
+            (board.is_fifty_moves(), "Game drawn by 50-move rule."),
+            (board.is_repetition(), "Game drawn by threefold repetition."),
+            (
+                board.is_insufficient_material(),
+                "Game drawn from insufficient material.",
+            ),
+            (board.is_stalemate(), "Game drawn by stalemate."),
+            (True, "Game drawn by agreement."),
+        ]
+        messages = [
+            draw_message for is_result, draw_message in draw_results if is_result
+        ]
+        logger.info(messages[0])
+    elif termination == model.Termination.TIMEOUT:
+        if winner:
+            logger.info(f"{losing_name} forfeited on time.")
+        else:
+            timeout_name = (
+                game.white.name if game.state.get("wtime") == 0 else game.black.name
+            )
+            other_name = (
+                game.white.name if timeout_name == game.black.name else game.black.name
+            )
+            logger.info(
+                f"{timeout_name} ran out of time, but {other_name} did not have enough material to mate."
+            )
+    elif termination:
+        logger.info(f"Game ended by {termination}")
