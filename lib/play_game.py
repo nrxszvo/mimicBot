@@ -93,6 +93,16 @@ def should_exit_game(
     return False
 
 
+def wbtime_param(board: chess.Board):
+    """Return `wtime` if it is white's turn to move else `btime`."""
+    return "wtime" if board.turn == chess.WHITE else "btime"
+
+
+def wbinc_param(board: chess.Board):
+    """Return `winc` if it is white's turn to move else `binc`."""
+    return "winc" if board.turn == chess.WHITE else "binc"
+
+
 def play_game(
     game_id: str,
     li: lichess.Lichess,
@@ -137,6 +147,11 @@ def play_game(
                     )
                     li.chat(game_id, "player", json.dumps(move.info))
                     time.sleep(to_seconds(delay))
+
+                wbtime = upd[wbtime_param(board)]
+                wbinc = upd[wbinc_param(board)]
+                terminate_time = msec(wbtime) + msec(wbinc) + seconds(60)
+                game.ping(abort_time, terminate_time, 0)
 
                 prior_game = copy.deepcopy(game)
             elif u_type == "ping" and should_exit_game(board, game, prior_game, li):
