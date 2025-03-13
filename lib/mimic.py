@@ -26,6 +26,9 @@ class MimicTestBot:
         li.make_move(game.id, best_move)
         return best_move
 
+    def reset(self):
+        self.core.reset()
+
     def search(self, board: chess.Board) -> PlayResult:
         last = None
         if len(board.move_stack) > 0:

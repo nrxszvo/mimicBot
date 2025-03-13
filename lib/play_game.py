@@ -10,6 +10,7 @@ from http.client import RemoteDisconnected
 from lib import model, lichess
 from lib.timer import to_seconds, seconds, msec
 from lib.mimic import MimicTestBot
+from flask import g
 import time
 import chess
 import itertools
@@ -103,11 +104,18 @@ def wbinc_param(board: chess.Board):
     return "winc" if board.turn == chess.WHITE else "binc"
 
 
+def get_engine(eid, max_games):
+    if "engines" not in g:
+        g.engines = [MimicTestBot() for _ in range(max_games)]
+    return g.engines[eid]
+
+
 def play_game(
     game_id: str,
     li: lichess.Lichess,
     config,
     username: str,
+    engine_rec,
 ) -> None:
     logger = logging.getLogger(__name__)
 
@@ -120,8 +128,8 @@ def play_game(
     abort_time = seconds(config.abort_time)
     game = model.Game(initial_state, username, li.baseUrl, abort_time)
 
-    engine = MimicTestBot()
     logger.info(f"+++ {game}")
+    engine = get_engine(engine_rec["id"], config.challenge.concurrency)
 
     delay = msec(config.rate_limiting_delay)
 
@@ -172,6 +180,8 @@ def play_game(
             logger.info(
                 f"exception caught: {e}, stopped = {stopped}, stay_in_game = {stay_in_game}"
             )
+    engine.reset()
+    engine_rec["active"] = False
     tell_user_game_result(game, board)
     logger.info(f"--- {game.url()} Game over")
 
