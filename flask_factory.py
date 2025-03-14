@@ -28,7 +28,5 @@ def create_app() -> Flask:
     )
     app.config.from_prefixed_env()
     celery_init_app(app)
-    import view
 
-    app.register_blueprint(view.bp)
     return app

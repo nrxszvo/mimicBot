@@ -104,21 +104,8 @@ def wbinc_param(board: chess.Board):
     return "winc" if board.turn == chess.WHITE else "binc"
 
 
-def get_engine(eid, max_games):
-    if "engines" not in g:
-        g.engines = [MimicTestBot() for _ in range(max_games)]
-    return g.engines[eid]
-
-
-def play_game(
-    game_id: str,
-    li: lichess.Lichess,
-    config,
-    username: str,
-    engine_rec,
-) -> None:
+def play_game(game_id: str, li: lichess.Lichess, config, username: str) -> None:
     logger = logging.getLogger(__name__)
-
     response = li.get_game_stream(game_id)
     lines = response.iter_lines()
 
@@ -129,7 +116,7 @@ def play_game(
     game = model.Game(initial_state, username, li.baseUrl, abort_time)
 
     logger.info(f"+++ {game}")
-    engine = get_engine(engine_rec["id"], config.challenge.concurrency)
+    engine = MimicTestBot()
 
     delay = msec(config.rate_limiting_delay)
 
@@ -145,7 +132,7 @@ def play_game(
             if u_type == "gameState":
                 game.state = upd
                 board = setup_board(game)
-                logger.info(f"{game_id}:\n{board}")
+                # logger.info(f"{game_id}:\n{board}")
                 if not is_game_over(game) and is_engine_move(game, prior_game, board):
                     move_attempted = True
                     move = engine.play_move(
@@ -181,22 +168,21 @@ def play_game(
                 f"exception caught: {e}, stopped = {stopped}, stay_in_game = {stay_in_game}"
             )
     engine.reset()
-    engine_rec["active"] = False
     tell_user_game_result(game, board)
     logger.info(f"--- {game.url()} Game over")
 
 
 def handle_challenge(event, li: lichess.Lichess, config, user_profile) -> None:
-    if len(li.get_ongoing_games()) < config.concurrency:
-        chlng = model.Challenge(event["challenge"], user_profile)
-        if chlng.from_self:
-            return
-        is_supported, decline_reason = chlng.is_supported(
-            config, defaultdict(list), defaultdict(lambda: 0)
-        )
-    else:
-        is_supported = False
-        decline_reason = "later"
+    if len(li.get_ongoing_games()) >= config.concurrency:
+        return False, "max_games"
+
+    chlng = model.Challenge(event["challenge"], user_profile)
+    if chlng.from_self:
+        return True, "self"
+
+    is_supported, decline_reason = chlng.is_supported(
+        config, defaultdict(list), defaultdict(lambda: 0)
+    )
 
     if is_supported:
         try:
@@ -205,6 +191,7 @@ def handle_challenge(event, li: lichess.Lichess, config, user_profile) -> None:
             pass
     else:
         li.decline_challenge(chlng.id, reason=decline_reason)
+    return is_supported, decline_reason
 
 
 def tell_user_game_result(game: model.Game, board: chess.Board) -> None:
