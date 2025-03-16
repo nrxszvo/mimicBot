@@ -104,6 +104,9 @@ def wbinc_param(board: chess.Board):
     return "winc" if board.turn == chess.WHITE else "binc"
 
 
+engine = MimicTestBot()
+
+
 def play_game(game_id: str, li: lichess.Lichess, config, username: str) -> None:
     logger = logging.getLogger(__name__)
     response = li.get_game_stream(game_id)
@@ -116,8 +119,7 @@ def play_game(game_id: str, li: lichess.Lichess, config, username: str) -> None:
     game = model.Game(initial_state, username, li.baseUrl, abort_time)
 
     logger.info(f"+++ {game}")
-    engine = MimicTestBot()
-
+    engine.add_game(game_id)
     delay = msec(config.rate_limiting_delay)
 
     prior_game = None
@@ -167,7 +169,7 @@ def play_game(game_id: str, li: lichess.Lichess, config, username: str) -> None:
             logger.info(
                 f"exception caught: {e}, stopped = {stopped}, stay_in_game = {stay_in_game}"
             )
-    engine.reset()
+    engine.remove_game(game_id)
     tell_user_game_result(game, board)
     logger.info(f"--- {game.url()} Game over")
 

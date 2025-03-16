@@ -15,6 +15,16 @@ from lib import model, lichess
 class MimicTestBot:
     def __init__(self):
         self.core = MimicTestBotCore()
+        self.games = {}
+
+    def add_game(self, gameId):
+        self.games[gameId] = {
+            "board": BoardState(),
+            "inp": torch.tensor([[STARTMV]], dtype=torch.int32),
+        }
+
+    def remove_game(self, gameId):
+        del self.games[gameId]
 
     def play_move(
         self,
@@ -22,18 +32,19 @@ class MimicTestBot:
         game: model.Game,
         li: lichess.Lichess,
     ) -> None:
-        best_move = self.search(board)
+        best_move = self.search(board, game.id)
         li.make_move(game.id, best_move)
         return best_move
 
-    def reset(self):
-        self.core.reset()
-
-    def search(self, board: chess.Board) -> PlayResult:
+    def search(self, board: chess.Board, gameId: str) -> PlayResult:
         last = None
         if len(board.move_stack) > 0:
             last = board.peek().uci()
-        mv, elo_preds = self.core.predict(last)
+
+        core_state = self.games[gameId]["board"]
+        inp = self.games[gameId]["inp"]
+        mv, elo_preds, inp = self.core.predict(last, core_state, inp)
+        self.games[gameId]["inp"] = inp
         return PlayResult(mv, None, info=elo_preds)
 
 
@@ -65,7 +76,7 @@ def get_model_args(cfgyml):
 
 
 class MimicTestBotCore:
-    def __init__(self):
+    def __init__(self, top_n=3, p_thresh=0.2):
         dn = pathlib.Path(__file__).parent.resolve()
         cfg = os.path.join(dn, "dual_zero_v04", "cfg.yml")
         cfgyml = get_config(cfg)
@@ -80,58 +91,63 @@ class MimicTestBotCore:
         )
         self.model.load_state_dict(cp)
         self.model.eval()
-        self.reset()
 
-    def reset(self):
-        self.board = BoardState()
-        self.inp = torch.tensor([[STARTMV]], dtype=torch.int32)
+        self.top_n = top_n
+        self.p_thresh = p_thresh
 
-    def _add_move(self, mvid):
+        wm, ws = self.whiten_params
+        def_elo = {"m": wm, "s": ws**2}
+        self._default_elo = {"weloParams": def_elo, "beloParams": def_elo}
+
+    def _add_move(self, mvid, inp):
         mv = torch.tensor([[mvid]], dtype=torch.int32)
-        self.inp = torch.cat([self.inp, mv], dim=1)
+        return torch.cat([inp, mv], dim=1)
+
+    def _create_elo_info(self, elo_pred):
+        wm, ws = self.whiten_params
+        ms = elo_pred[0, :, 0, 0] * ws + wm
+        ss = ((elo_pred[0, :, 0, 1] ** 0.5) * ws) ** 2
+
+        if len(ms) % 2 == 0:
+            widx = -2
+            bidx = -1
+        else:
+            widx = -1
+            bidx = -2
+
+        return {
+            "weloParams": {"m": ms[widx].item(), "s": ss[widx].item()},
+            "beloParams": {"m": ms[bidx].item(), "s": ss[bidx].item()},
+        }
 
     @torch.inference_mode
-    def predict(self, uci: str) -> chess.Move:
-        wm, ws = self.whiten_params
+    def predict(self, uci: str, state: BoardState, inp: torch.Tensor) -> chess.Move:
+        if uci is not None:
+            mvid = state.uci_to_mvid(uci)
+            state.update(mvid)
+            inp = self._add_move(mvid, inp)
 
-        def parse_elo(elo_pred):
-            m = elo_pred[0, :, 0, 0] * ws + wm
-            s = ((elo_pred[0, :, 0, 1] ** 0.5) * ws) ** 2
-            return m, s
+        mv_pred, elo_pred = self.model(inp)
 
         if uci is not None:
-            mvid = self.board.uci_to_mvid(uci)
-            self.board.update(mvid)
-            self._add_move(mvid)
+            info = self._create_elo_info(elo_pred)
+        else:
+            info = self._default_elo
 
-        mv_pred, elo_pred = self.model(self.inp)
-
-        def_elo = {"m": wm, "s": ws**2}
-        info = {"weloParams": def_elo, "beloParams": def_elo}
-        if uci is not None:
-            ms, ss = parse_elo(elo_pred)
-            if len(ms) % 2 == 0:
-                widx = -2
-                bidx = -1
-            else:
-                widx = -1
-                bidx = -2
-            info = {
-                "weloParams": {"m": ms[widx].item(), "s": ss[widx].item()},
-                "beloParams": {"m": ms[bidx].item(), "s": ss[bidx].item()},
-            }
         probs, mvids = mv_pred[0, -1, -1, -1].softmax(dim=0).sort(descending=True)
-        p = probs[:5].double() / probs[:5].double().sum()
-        p[p < 0.05] = 1e-8
+        p = probs[: self.top_n].double() / probs[: self.top_n].double().sum()
+        probs[probs < self.p_thresh] = 1e-8
         p = p / p.sum()
-        mvids = np.random.choice(mvids[:5], size=5, replace=False, p=p)
+        mvids = np.random.choice(
+            mvids[: self.top_n], size=self.top_n, replace=False, p=p
+        )
         for mvid in mvids:
             try:
-                mv = self.board.update(mvid)
-                self._add_move(mvid)
+                mv = state.update(mvid)
+                inp = self._add_move(mvid, inp)
                 break
             except IllegalMoveException:
                 continue
         else:
             raise Exception("model did not produce a legal move")
-        return mv, info
+        return mv, info, inp
