@@ -136,7 +136,7 @@ class MimicTestBotCore:
 
         probs, mvids = mv_pred[0, -1, -1, -1].softmax(dim=0).sort(descending=True)
         p = probs[: self.top_n].double() / probs[: self.top_n].double().sum()
-        probs[probs < self.p_thresh] = 1e-8
+        p[p < self.p_thresh] = 1e-8
         p = p / p.sum()
         mvids = np.random.choice(
             mvids[: self.top_n], size=self.top_n, replace=False, p=p
