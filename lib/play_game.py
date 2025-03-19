@@ -109,6 +109,8 @@ engine = MimicTestBot()
 
 def play_game(game_id: str, li: lichess.Lichess, config, username: str) -> None:
     logger = logging.getLogger(__name__)
+
+    li.chat(game_id, "player", json.dumps(engine.default_elo()))
     response = li.get_game_stream(game_id)
     lines = response.iter_lines()
 
@@ -176,9 +178,10 @@ def play_game(game_id: str, li: lichess.Lichess, config, username: str) -> None:
 
 def handle_challenge(event, li: lichess.Lichess, config, user_profile) -> None:
     if len(li.get_ongoing_games()) >= config.concurrency:
+        li.abort(event["id"])
         return False, "max_games"
 
-    chlng = model.Challenge(event["challenge"], user_profile)
+    chlng = model.Challenge(event, user_profile)
     if chlng.from_self:
         return True, "self"
 

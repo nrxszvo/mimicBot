@@ -17,6 +17,9 @@ class MimicTestBot:
         self.core = MimicTestBotCore()
         self.games = {}
 
+    def default_elo(self):
+        return self.core.default_elo
+
     def add_game(self, gameId):
         self.games[gameId] = {
             "board": BoardState(),
@@ -97,7 +100,7 @@ class MimicTestBotCore:
 
         wm, ws = self.whiten_params
         def_elo = {"m": wm, "s": ws**2}
-        self._default_elo = {"weloParams": def_elo, "beloParams": def_elo}
+        self.default_elo = {"weloParams": def_elo, "beloParams": def_elo}
 
     def _add_move(self, mvid, inp):
         mv = torch.tensor([[mvid]], dtype=torch.int32)
@@ -132,7 +135,7 @@ class MimicTestBotCore:
         if uci is not None:
             info = self._create_elo_info(elo_pred)
         else:
-            info = self._default_elo
+            info = self.default_elo
 
         probs, mvids = mv_pred[0, -1, -1, -1].softmax(dim=0).sort(descending=True)
         p = probs[: self.top_n].double() / probs[: self.top_n].double().sum()

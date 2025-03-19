@@ -86,7 +86,9 @@ def incoming_challenge():
             }
         }
 
-    accepted, reason = handle_challenge(msg, li, config.challenge, user_profile)
+    accepted, reason = handle_challenge(
+        msg["challenge"], li, config.challenge, user_profile
+    )
     return {"challenge": {"accepted": accepted, "decline_reason": reason}}
 
 
