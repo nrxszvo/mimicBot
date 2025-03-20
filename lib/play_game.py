@@ -10,6 +10,7 @@ from http.client import RemoteDisconnected
 from lib import model, lichess
 from lib.timer import to_seconds, seconds, msec
 from lib.mimic import MimicTestBot
+from lib.pgnUtils import IllegalMoveException
 from flask import g
 import time
 import chess
@@ -110,8 +111,8 @@ engine = MimicTestBot()
 def play_game(game_id: str, li: lichess.Lichess, config, username: str) -> None:
     logger = logging.getLogger(__name__)
 
-    li.chat(game_id, "player", json.dumps(engine.default_elo()))
     response = li.get_game_stream(game_id)
+    li.chat(game_id, "player", json.dumps(engine.default_elo()))
     lines = response.iter_lines()
 
     # Initial response of stream will be the full game info. Store it.
@@ -139,20 +140,25 @@ def play_game(game_id: str, li: lichess.Lichess, config, username: str) -> None:
                 # logger.info(f"{game_id}:\n{board}")
                 if not is_game_over(game) and is_engine_move(game, prior_game, board):
                     move_attempted = True
-                    move = engine.play_move(
-                        board,
-                        game,
-                        li,
-                    )
-                    li.chat(game_id, "player", json.dumps(move.info))
-                    time.sleep(to_seconds(delay))
+                    try:
+                        move = engine.play_move(
+                            board,
+                            game,
+                            li,
+                        )
+                        li.chat(game_id, "player", json.dumps(move.info))
+                        time.sleep(to_seconds(delay))
+
+                    except IllegalMoveException:
+                        li.resign(game_id)
+                        stay_in_game = False
 
                 wbtime = upd[wbtime_param(board)]
                 wbinc = upd[wbinc_param(board)]
                 terminate_time = msec(wbtime) + msec(wbinc) + seconds(60)
                 game.ping(abort_time, terminate_time, 0)
-
                 prior_game = copy.deepcopy(game)
+
             elif u_type == "ping" and should_exit_game(board, game, prior_game, li):
                 logger.info("should_exit_game returned true")
                 stay_in_game = False

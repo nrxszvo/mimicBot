@@ -5,11 +5,14 @@ import chess
 from chess.engine import PlayResult
 import numpy as np
 import torch
+from xata.client import XataClient
 
 from lib.dual_zero_v04.config import get_config
 from lib.dual_zero_v04.model import ModelArgs, Transformer
 from lib.pgnUtils import STARTMV, BoardState, IllegalMoveException
 from lib import model, lichess
+
+xata = XataClient()
 
 
 class MimicTestBot:
@@ -21,9 +24,12 @@ class MimicTestBot:
         return self.core.default_elo
 
     def add_game(self, gameId):
+        m, s = self.core.whiten_params
         self.games[gameId] = {
             "board": BoardState(),
             "inp": torch.tensor([[STARTMV]], dtype=torch.int32),
+            "welo": f"{int(m)},{int(s**2)}",
+            "belo": f"{int(m)},{int(s**2)}",
         }
 
     def remove_game(self, gameId):
@@ -39,6 +45,18 @@ class MimicTestBot:
         li.make_move(game.id, best_move)
         return best_move
 
+    def _update_elos(self, gameId, elo_preds):
+        def update_elo(name):
+            ep = elo_preds[name + "Params"]
+            self.games[gameId][name] = (
+                f"{self.games[gameId][name]},{int(ep['m'])},{int(ep['s'])}"
+            )
+
+        print(self.games[gameId]["welo"])
+        for name in ["welo", "belo"]:
+            update_elo(name)
+            xata.records().update("game", gameId, {name: self.games[gameId][name]})
+
     def search(self, board: chess.Board, gameId: str) -> PlayResult:
         last = None
         if len(board.move_stack) > 0:
@@ -48,6 +66,7 @@ class MimicTestBot:
         inp = self.games[gameId]["inp"]
         mv, elo_preds, inp = self.core.predict(last, core_state, inp)
         self.games[gameId]["inp"] = inp
+        self._update_elos(gameId, elo_preds)
         return PlayResult(mv, None, info=elo_preds)
 
 
@@ -79,7 +98,7 @@ def get_model_args(cfgyml):
 
 
 class MimicTestBotCore:
-    def __init__(self, top_n=3, p_thresh=0.2):
+    def __init__(self, top_n=10, p_thresh=0.2):
         dn = pathlib.Path(__file__).parent.resolve()
         cfg = os.path.join(dn, "dual_zero_v04", "cfg.yml")
         cfgyml = get_config(cfg)
