@@ -66,6 +66,9 @@ fi
 if [ ! -d /var/www/html/mimicBot ]; then
 	sudo ln -sT ~/git/mimicBot /var/www/html/mimicBot
 fi
+sudo mkdir /var/www/.config/xata
+sudo cp .env /var/www/.config/xata.key 
+sudo cp .xatarc /
 sudo cp git/mimicBot/apache.conf /etc/apache2/sites-enabled/000-default.conf
 sudo cp git/mimicBot/celery.conf /etc/default/celeryd
 sudo cp git/mimicBot/celeryd /etc/init.d
