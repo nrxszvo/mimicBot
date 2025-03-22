@@ -66,6 +66,7 @@ fi
 if [ ! -d /var/www/html/mimicBot ]; then
 	sudo ln -sT ~/git/mimicBot /var/www/html/mimicBot
 fi
+sudo mkdir /var/www/.config
 sudo mkdir /var/www/.config/xata
 sudo cp .env /var/www/.config/xata.key 
 sudo cp .xatarc /

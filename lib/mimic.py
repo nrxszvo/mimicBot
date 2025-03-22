@@ -23,6 +23,13 @@ class MimicTestBot:
     def default_elo(self):
         return self.core.default_elo
 
+    def _update_xata(self, gameId):
+        xata.records().update(
+            "game",
+            gameId,
+            {"welo": self.games[gameId]["welo"], "belo": self.games[gameId]["belo"]},
+        )
+
     def add_game(self, gameId):
         m, s = self.core.whiten_params
         self.games[gameId] = {
@@ -31,6 +38,7 @@ class MimicTestBot:
             "welo": f"{int(m)},{int(s**2)}",
             "belo": f"{int(m)},{int(s**2)}",
         }
+        self._update_xata(gameId)
 
     def remove_game(self, gameId):
         del self.games[gameId]
@@ -52,10 +60,9 @@ class MimicTestBot:
                 f"{self.games[gameId][name]},{int(ep['m'])},{int(ep['s'])}"
             )
 
-        print(self.games[gameId]["welo"])
         for name in ["welo", "belo"]:
             update_elo(name)
-            xata.records().update("game", gameId, {name: self.games[gameId][name]})
+        self._update_xata(gameId)
 
     def search(self, board: chess.Board, gameId: str) -> PlayResult:
         last = None
