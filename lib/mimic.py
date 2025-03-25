@@ -49,24 +49,34 @@ class MimicTestBot:
     def analyze_pgn(self, pgn):
         board = BoardState()
         inp = torch.tensor([[STARTMV]], dtype=torch.int32)
-        game = chess.pgn.read_game(pgn)
-        if "GameId" in game.headers:
-            gameId = "pgn-" + game.headers["GameId"]
-        else:
-            gameId = "pgn-???"
-        moves = []
-        for move in game.mainline_moves():
-            moves.append(move.uci())
-            mvid = board.uci_to_mvid(moves[-1])
-            board.update(mvid)
-            inp = add_move(mvid, inp)
-        _, elo_preds = self.core.model(inp)
-        ms, ss = self.core.create_elo_analysis(elo_preds)
-        msss = torch.stack((ms, ss), dim=1)
-        welos = msss[::2].reshape(-1)
-        belos = msss[1::2].reshape(-1)
+        try:
+            game = chess.pgn.read_game(pgn)
+            if "FEN" in game.headers:
+                return {
+                    "success": False,
+                    "reason": "Non-standard opening positions are not supported",
+                }
+
+            if "GameId" in game.headers:
+                gameId = "pgn-" + game.headers["GameId"]
+            else:
+                gameId = "pgn-???"
+            moves = []
+            for move in game.mainline_moves():
+                moves.append(move.uci())
+                mvid = board.uci_to_mvid(moves[-1])
+                board.update(mvid)
+                inp = add_move(mvid, inp)
+            _, elo_preds = self.core.model(inp)
+            ms, ss = self.core.create_elo_analysis(elo_preds)
+            msss = torch.stack((ms, ss), dim=1)
+            welos = msss[::2].reshape(-1)
+            belos = msss[1::2].reshape(-1)
+        except Exception as e:
+            return {"success": False, "reason": "Error reading PGN"}
 
         return {
+            "success": True,
             "gameId": gameId,
             "moves": moves,
             "welos": welos.tolist(),
