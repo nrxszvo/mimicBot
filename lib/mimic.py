@@ -33,8 +33,8 @@ class MimicTestBot:
             "game",
             gameId,
             {
-                "welos": self.games[gameId]["welos"],
-                "belos": self.games[gameId]["belos"],
+                "welos": self.games[gameId]["welo"],
+                "belos": self.games[gameId]["belo"],
             },
         )
 
@@ -43,8 +43,8 @@ class MimicTestBot:
         self.games[gameId] = {
             "board": BoardState(),
             "inp": torch.tensor([[STARTMV]], dtype=torch.int32),
-            "welos": f"{int(m)},{int(s**2)}",
-            "belos": f"{int(m)},{int(s**2)}",
+            "welo": f"{int(m)},{int(s**2)}",
+            "belo": f"{int(m)},{int(s**2)}",
         }
         self._update_xata(gameId)
 
