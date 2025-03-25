@@ -110,7 +110,7 @@ class MimicTestBot:
                 f"{self.games[gameId][name]},{int(ep['m'])},{int(ep['s'])}"
             )
 
-        for name in ["welos", "belos"]:
+        for name in ["welo", "belo"]:
             update_elo(name)
         self._update_xata(gameId)
 
