@@ -11,7 +11,6 @@ from lib import model, lichess
 from lib.timer import to_seconds, seconds, msec
 from lib.mimic import MimicTestBot
 from lib.pgnUtils import IllegalMoveException
-from flask import g
 import time
 import chess
 import chess.pgn

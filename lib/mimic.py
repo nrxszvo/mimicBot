@@ -66,7 +66,16 @@ class MimicTestBot:
         welos = msss[::2].reshape(-1)
         belos = msss[1::2].reshape(-1)
 
-        return gameId, moves, welos, belos
+        return {
+            "gameId": gameId,
+            "moves": moves,
+            "welos": welos.tolist(),
+            "belos": belos.tolist(),
+            "white": game.headers["White"],
+            "black": game.headers["Black"],
+            "whiteElo": game.headers["WhiteElo"],
+            "blackElo": game.headers["BlackElo"],
+        }
 
     def remove_game(self, gameId):
         del self.games[gameId]

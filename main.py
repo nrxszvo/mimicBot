@@ -106,13 +106,7 @@ def gameStart(gameId):
 @app.post("/analyzePgn")
 def analyzePgn():
     msg = request.json
-    gameId, moves, welos, belos = analyze_pgn(io.StringIO(msg))
-    return {
-        "gameId": gameId,
-        "moves": moves,
-        "welos": welos.tolist(),
-        "belos": belos.tolist(),
-    }
+    return analyze_pgn(io.StringIO(msg))
 
 
 if __name__ == "__main__":
