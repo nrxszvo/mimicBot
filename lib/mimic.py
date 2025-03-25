@@ -32,7 +32,10 @@ class MimicTestBot:
         xata.records().update(
             "game",
             gameId,
-            {"welo": self.games[gameId]["welo"], "belo": self.games[gameId]["belo"]},
+            {
+                "welos": self.games[gameId]["welos"],
+                "belos": self.games[gameId]["belos"],
+            },
         )
 
     def add_game(self, gameId):
@@ -40,8 +43,8 @@ class MimicTestBot:
         self.games[gameId] = {
             "board": BoardState(),
             "inp": torch.tensor([[STARTMV]], dtype=torch.int32),
-            "welo": f"{int(m)},{int(s**2)}",
-            "belo": f"{int(m)},{int(s**2)}",
+            "welos": f"{int(m)},{int(s**2)}",
+            "belos": f"{int(m)},{int(s**2)}",
         }
         self._update_xata(gameId)
 
@@ -107,7 +110,7 @@ class MimicTestBot:
                 f"{self.games[gameId][name]},{int(ep['m'])},{int(ep['s'])}"
             )
 
-        for name in ["welo", "belo"]:
+        for name in ["welos", "belos"]:
             update_elo(name)
         self._update_xata(gameId)
 
