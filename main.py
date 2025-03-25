@@ -1,6 +1,7 @@
 import logging
 import os
 import pathlib
+import io
 
 import yaml
 from celery import shared_task, Task
@@ -9,7 +10,7 @@ from flask_cors import CORS
 
 from lib import lichess
 from lib.dual_zero_v04.config import get_config
-from lib.play_game import handle_challenge, play_game
+from lib.play_game import handle_challenge, play_game, analyze_pgn
 from flask_factory import celery_init_app
 
 app = Flask(__name__)
@@ -100,6 +101,18 @@ def gameStart(gameId):
         active_games.add(gameId)
         handle_play_game.delay(gameId)
         return {"gameStart": {"accepted": True}}
+
+
+@app.post("/analyzePgn")
+def analyzePgn():
+    msg = request.json
+    gameId, moves, welos, belos = analyze_pgn(io.StringIO(msg))
+    return {
+        "gameId": gameId,
+        "moves": moves,
+        "welos": welos.tolist(),
+        "belos": belos.tolist(),
+    }
 
 
 if __name__ == "__main__":

@@ -14,6 +14,7 @@ from lib.pgnUtils import IllegalMoveException
 from flask import g
 import time
 import chess
+import chess.pgn
 import itertools
 import copy
 import logging
@@ -106,6 +107,10 @@ def wbinc_param(board: chess.Board):
 
 
 engine = MimicTestBot()
+
+
+def analyze_pgn(pgn):
+    return engine.analyze_pgn(pgn)
 
 
 def play_game(game_id: str, li: lichess.Lichess, config, username: str) -> None:

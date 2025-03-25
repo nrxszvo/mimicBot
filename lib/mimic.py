@@ -15,6 +15,11 @@ from lib import model, lichess
 xata = XataClient()
 
 
+def add_move(mvid, inp):
+    mv = torch.tensor([[mvid]], dtype=torch.int32)
+    return torch.cat([inp, mv], dim=1)
+
+
 class MimicTestBot:
     def __init__(self):
         self.core = MimicTestBotCore()
@@ -39,6 +44,29 @@ class MimicTestBot:
             "belo": f"{int(m)},{int(s**2)}",
         }
         self._update_xata(gameId)
+
+    @torch.inference_mode
+    def analyze_pgn(self, pgn):
+        board = BoardState()
+        inp = torch.tensor([[STARTMV]], dtype=torch.int32)
+        game = chess.pgn.read_game(pgn)
+        if "GameId" in game.headers:
+            gameId = "pgn-" + game.headers["GameId"]
+        else:
+            gameId = "pgn-???"
+        moves = []
+        for move in game.mainline_moves():
+            moves.append(move.uci())
+            mvid = board.uci_to_mvid(moves[-1])
+            board.update(mvid)
+            inp = add_move(mvid, inp)
+        _, elo_preds = self.core.model(inp)
+        ms, ss = self.core.create_elo_analysis(elo_preds)
+        msss = torch.stack((ms, ss), dim=1)
+        welos = msss[::2].reshape(-1)
+        belos = msss[1::2].reshape(-1)
+
+        return gameId, moves, welos, belos
 
     def remove_game(self, gameId):
         del self.games[gameId]
@@ -128,15 +156,17 @@ class MimicTestBotCore:
         def_elo = {"m": wm, "s": ws**2}
         self.default_elo = {"weloParams": def_elo, "beloParams": def_elo}
 
-    def _add_move(self, mvid, inp):
-        mv = torch.tensor([[mvid]], dtype=torch.int32)
-        return torch.cat([inp, mv], dim=1)
+    def create_elo_analysis(self, elo_preds):
+        wm, ws = self.whiten_params
+        ms = torch.cat([torch.tensor([wm, wm]), elo_preds[0, :, 0, 0] * ws + wm], dim=0)
+        ss = torch.cat(
+            [torch.tensor([ws**2, ws**2]), ((elo_preds[0, :, 0, 1] ** 0.5) * ws) ** 2],
+            dim=0,
+        )
+        return ms, ss
 
     def _create_elo_info(self, elo_pred):
-        wm, ws = self.whiten_params
-        ms = elo_pred[0, :, 0, 0] * ws + wm
-        ss = ((elo_pred[0, :, 0, 1] ** 0.5) * ws) ** 2
-
+        ms, ss = self.create_elo_analysis(elo_pred)
         if len(ms) % 2 == 0:
             widx = -2
             bidx = -1
@@ -154,7 +184,7 @@ class MimicTestBotCore:
         if uci is not None:
             mvid = state.uci_to_mvid(uci)
             state.update(mvid)
-            inp = self._add_move(mvid, inp)
+            inp = add_move(mvid, inp)
 
         mv_pred, elo_pred = self.model(inp)
 
@@ -173,7 +203,7 @@ class MimicTestBotCore:
         for mvid in mvids:
             try:
                 mv = state.update(mvid)
-                inp = self._add_move(mvid, inp)
+                inp = add_move(mvid, inp)
                 break
             except IllegalMoveException:
                 continue
