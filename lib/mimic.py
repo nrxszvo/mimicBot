@@ -1,5 +1,6 @@
 import os
 import pathlib
+import hashlib
 
 import chess
 from chess.engine import PlayResult
@@ -62,8 +63,15 @@ class MimicTestBot:
 
             if "GameId" in game.headers:
                 gameId = "pgn-" + game.headers["GameId"]
+            elif "Link" in game.headers:
+                print(game.headers["Link"])
+                gameId = (
+                    "pgn-"
+                    + hashlib.sha256(game.headers["Link"].encode()).hexdigest()[:8]
+                )
             else:
-                gameId = "pgn-???"
+                gameId = "pgn-abcdefgh"
+            print(gameId)
             moves = []
             for move in game.mainline_moves():
                 moves.append(move.uci())
