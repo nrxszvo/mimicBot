@@ -15,7 +15,7 @@ For more information and to see it in action, visit the [mimicChess demo site](h
 - **Flask**: To handle web requests
 - **Celery**: For task queue management
 
-It runs the bot from a **Google Cloud virtual machine**.
+The provided provisioning script is used to run the bot from a **Google Cloud virtual machine**.
 
 ---
 
