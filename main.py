@@ -2,6 +2,7 @@ import logging
 import os
 import pathlib
 import io
+from typing import Any
 
 import yaml
 from celery import shared_task, Task
@@ -42,22 +43,19 @@ active_games = set()
 
 
 class CallbackTask(Task):
-    def on_success(self, retval, task_id, args, kwargs):
-        """
-        retval – The return value of the task.
-        task_id – Unique id of the executed task.
-        args – Original arguments for the executed task.
-        kwargs – Original keyword arguments for the executed task.
-        """
+    def on_success(
+        self, retval: Any, task_id: str, args: list[Any], kwargs: dict[str, Any]
+    ):
         active_games.remove(args[0])
 
-    def on_failure(self, exc, task_id, args, kwargs, einfo):
-        """
-        exc – The exception raised by the task.
-        task_id – Unique id of the failed task.
-        args – Original arguments for the task that failed.
-        kwargs – Original keyword arguments for the task that failed.
-        """
+    def on_failure(
+        self,
+        exc: Exception,
+        task_id: str,
+        args: list[Any],
+        kwargs: dict[str, Any],
+        einfo,
+    ):
         active_games.remove(args[0])
 
 
@@ -94,7 +92,7 @@ def incoming_challenge():
 
 
 @app.get("/gameStart/<gameId>")
-def gameStart(gameId):
+def gameStart(gameId: str):
     if gameId in active_games:
         return {"gameStart": {"accepted": False, "decline_reason": gameId + " exists"}}
     else:

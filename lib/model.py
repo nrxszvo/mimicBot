@@ -240,7 +240,7 @@ class Game:
         self,
         abort_in: datetime.timedelta,
         terminate_in: datetime.timedelta,
-        disconnect_in: datetime.timedelta,
+        disconnect_in: datetime.timedelta=seconds(0),
     ) -> None:
         """
         Tell the bot when to abort, terminate, and disconnect from a game.

@@ -1,19 +1,21 @@
+from typing import Any
 from requests.exceptions import (
     ChunkedEncodingError,
     HTTPError,
     ReadTimeout,
     ConnectionError,
 )
-from collections import defaultdict
+import io
+from collections import Counter, defaultdict
 from chess.variant import find_variant
 from http.client import RemoteDisconnected
 from lib import model, lichess
+from lib.lichess_types import UserProfileType
 from lib.timer import to_seconds, seconds, msec
 from lib.mimic import MimicTestBot
 from lib.pgnUtils import IllegalMoveException
 import time
 import chess
-import chess.pgn
 import itertools
 import copy
 import logging
@@ -27,7 +29,7 @@ def game_is_active(li: lichess.Lichess, game_id: str) -> bool:
     )
 
 
-def next_update(lines):
+def next_update(lines: itertools.chain[bytes]) -> Any:
     """Get the next game state."""
     binary_chunk = next(lines)
     upd = json.loads(binary_chunk.decode("utf-8")) if binary_chunk else {}
@@ -40,7 +42,7 @@ def is_game_over(game: model.Game) -> bool:
     return status != "started"
 
 
-def game_changed(current_game: model.Game, prior_game) -> bool:
+def game_changed(current_game: model.Game, prior_game: model.Game|None) -> bool:
     """Check whether the current game state is different from the previous game state."""
     if prior_game is None:
         return True
@@ -54,7 +56,9 @@ def bot_to_move(game: model.Game, board: chess.Board) -> bool:
     return game.is_white == (board.turn == chess.WHITE)
 
 
-def is_engine_move(game, prior_game, board) -> bool:
+def is_engine_move(
+    game: model.Game, prior_game: model.Game|None, board: chess.Board
+) -> bool:
     """Check whether it is the engine's turn."""
     return game_changed(game, prior_game) and bot_to_move(game, board)
 
@@ -79,9 +83,7 @@ def setup_board(game: model.Game) -> chess.Board:
 
 
 def should_exit_game(
-    board: chess.Board,
     game: model.Game,
-    prior_game,
     li: lichess.Lichess,
 ) -> bool:
     """Whether we should exit a game."""
@@ -108,7 +110,7 @@ def wbinc_param(board: chess.Board):
 engine = MimicTestBot()
 
 
-def analyze_pgn(pgn):
+def analyze_pgn(pgn: io.StringIO) -> dict:
     return engine.analyze_pgn(pgn)
 
 
@@ -160,10 +162,10 @@ def play_game(game_id: str, li: lichess.Lichess, config, username: str) -> None:
                 wbtime = upd[wbtime_param(board)]
                 wbinc = upd[wbinc_param(board)]
                 terminate_time = msec(wbtime) + msec(wbinc) + seconds(60)
-                game.ping(abort_time, terminate_time, 0)
+                game.ping(abort_time, terminate_time)
                 prior_game = copy.deepcopy(game)
 
-            elif u_type == "ping" and should_exit_game(board, game, prior_game, li):
+            elif u_type == "ping" and should_exit_game(game, li):
                 logger.info("should_exit_game returned true")
                 stay_in_game = False
         except (
@@ -186,7 +188,9 @@ def play_game(game_id: str, li: lichess.Lichess, config, username: str) -> None:
     logger.info(f"--- {game.url()} Game over")
 
 
-def handle_challenge(event, li: lichess.Lichess, config, user_profile) -> None:
+def handle_challenge(
+    event, li: lichess.Lichess, config, user_profile: UserProfileType
+) -> tuple[bool, str]:
     if len(li.get_ongoing_games()) >= config.concurrency:
         li.abort(event["id"])
         return False, "max_games"
@@ -196,7 +200,7 @@ def handle_challenge(event, li: lichess.Lichess, config, user_profile) -> None:
         return True, "self"
 
     is_supported, decline_reason = chlng.is_supported(
-        config, defaultdict(list), defaultdict(lambda: 0)
+        config, defaultdict(list), Counter()
     )
 
     if is_supported:

@@ -1,8 +1,10 @@
 import os
 import pathlib
 import hashlib
+import io
 
 import chess
+import chess.pgn
 from chess.engine import PlayResult
 import numpy as np
 import torch
@@ -49,8 +51,7 @@ class MimicTestBot:
         }
         self._update_xata(gameId)
 
-    @torch.inference_mode
-    def analyze_pgn(self, pgn):
+    def analyze_pgn(self, pgn: io.StringIO) -> dict:
         board = BoardState()
         inp = torch.tensor([[STARTMV]], dtype=torch.int32)
         try:
@@ -64,14 +65,12 @@ class MimicTestBot:
             if "GameId" in game.headers:
                 gameId = "pgn-" + game.headers["GameId"]
             elif "Link" in game.headers:
-                print(game.headers["Link"])
                 gameId = (
                     "pgn-"
                     + hashlib.sha256(game.headers["Link"].encode()).hexdigest()[:8]
                 )
             else:
                 gameId = "pgn-abcdefgh"
-            print(gameId)
             moves = []
             for move in game.mainline_moves():
                 moves.append(move.uci())
@@ -106,13 +105,13 @@ class MimicTestBot:
         board: chess.Board,
         game: model.Game,
         li: lichess.Lichess,
-    ) -> None:
+    ) -> PlayResult:
         best_move = self.search(board, game.id)
         li.make_move(game.id, best_move)
         return best_move
 
-    def _update_elos(self, gameId, elo_preds):
-        def update_elo(name):
+    def _update_elos(self, gameId: str, elo_preds: dict) -> None:
+        def update_elo(name: str):
             ep = elo_preds[name + "Params"]
             self.games[gameId][name] = (
                 f"{self.games[gameId][name]},{int(ep['m'])},{int(ep['s'])}"
@@ -141,7 +140,8 @@ class Wrapper(torch.nn.Module):
         self.model = ptmodel
 
     def forward(self, inp):
-        return self.model(inp)
+        with torch.inference_mode():
+            return self.model(inp)
 
 
 def get_model_args(cfgyml):
@@ -209,8 +209,9 @@ class MimicTestBotCore:
             "beloParams": {"m": ms[bidx].item(), "s": ss[bidx].item()},
         }
 
-    @torch.inference_mode
-    def predict(self, uci: str, state: BoardState, inp: torch.Tensor) -> chess.Move:
+    def predict(
+        self, uci: str | None, state: BoardState, inp: torch.Tensor
+    ) -> tuple[chess.Move, dict, torch.Tensor]:
         if uci is not None:
             mvid = state.uci_to_mvid(uci)
             state.update(mvid)
