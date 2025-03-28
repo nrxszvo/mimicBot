@@ -28,5 +28,5 @@ It runs the bot from a **Google Cloud virtual machine**.
 
 ### 📄 Related Repositories
 
-- For the source code to create the Lichess bot wrapping the mimicChess engine, check out the [mimicChess](https://github.com/nrxszvo/mimicChess) repository.
+- For the source code used to train the mimicChess engine, check out the [mimicChess](https://github.com/nrxszvo/mimicChess) repository.
   
