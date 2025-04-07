@@ -42,7 +42,7 @@ def is_game_over(game: model.Game) -> bool:
     return status != "started"
 
 
-def game_changed(current_game: model.Game, prior_game: model.Game|None) -> bool:
+def game_changed(current_game: model.Game, prior_game: model.Game | None) -> bool:
     """Check whether the current game state is different from the previous game state."""
     if prior_game is None:
         return True
@@ -57,7 +57,7 @@ def bot_to_move(game: model.Game, board: chess.Board) -> bool:
 
 
 def is_engine_move(
-    game: model.Game, prior_game: model.Game|None, board: chess.Board
+    game: model.Game, prior_game: model.Game | None, board: chess.Board
 ) -> bool:
     """Check whether it is the engine's turn."""
     return game_changed(game, prior_game) and bot_to_move(game, board)
@@ -123,7 +123,7 @@ def play_game(game_id: str, li: lichess.Lichess, config, username: str) -> None:
 
     # Initial response of stream will be the full game info. Store it.
     initial_state = json.loads(next(lines).decode("utf-8"))
-    logger.debug(f"Initial state: {initial_state}")
+    logger.info(f"Initial state: {initial_state}")
     abort_time = seconds(config.abort_time)
     game = model.Game(initial_state, username, li.baseUrl, abort_time)
 
@@ -133,7 +133,8 @@ def play_game(game_id: str, li: lichess.Lichess, config, username: str) -> None:
 
     prior_game = None
     board = chess.Board()
-    game_stream = itertools.chain([json.dumps(game.state).encode("utf-8")], lines)
+    game_stream = itertools.chain(
+        [json.dumps(game.state).encode("utf-8")], lines)
     stay_in_game = True
     while stay_in_game:
         move_attempted = False
@@ -258,7 +259,8 @@ def tell_user_game_result(game: model.Game, board: chess.Board) -> None:
             logger.info(f"{losing_name} forfeited on time.")
         else:
             timeout_name = (
-                game.white.name if game.state.get("wtime") == 0 else game.black.name
+                game.white.name if game.state.get(
+                    "wtime") == 0 else game.black.name
             )
             other_name = (
                 game.white.name if timeout_name == game.black.name else game.black.name

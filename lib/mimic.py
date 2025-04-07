@@ -218,6 +218,7 @@ class MimicTestBotCore:
             state.update(mvid)
             inp = add_move(mvid, inp)
 
+        color = inp.shape[1] % 2
         mv_pred, elo_pred = self.model(inp)
 
         if uci is not None:
@@ -226,7 +227,7 @@ class MimicTestBotCore:
             info = self.default_elo
 
         probs, mvids = mv_pred[0, -1, -1, -
-                               1].softmax(dim=0).sort(descending=True)
+                               1, color].softmax(dim=0).sort(descending=True)
         p = probs[: self.top_n].double() / probs[: self.top_n].double().sum()
         p[p < self.p_thresh] = 1e-8
         p = p / p.sum()
