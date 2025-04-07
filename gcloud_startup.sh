@@ -38,8 +38,8 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 python3 xata_frontend.py --download_cfg --cfg_id default
-if [ ! -f "lib/dual_zero_v04/weights.ckpt" ]; then
-	python3 xata_frontend.py --download_model --model_dir lib/dual_zero_v04 --model_id dual_zero_v04
+if [ ! -f "lib/latest/weights.ckpt" ]; then
+	python3 xata_frontend.py --download_model --model_path lib/latest/weights.ckpt 
 fi
 sudo mkdir /var/www/.config
 sudo mkdir /var/www/.config/xata

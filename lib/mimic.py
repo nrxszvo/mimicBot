@@ -9,9 +9,8 @@ from chess.engine import PlayResult
 import numpy as np
 import torch
 from xata.client import XataClient
-
-from lib.dual_zero_v04.config import get_config
-from lib.dual_zero_v04.model import ModelArgs, Transformer
+from lib.models import get_config
+from lib.models.latest import ModelArgs, Transformer
 from lib.pgnUtils import STARTMV, BoardState, IllegalMoveException
 from lib import model, lichess
 
@@ -165,14 +164,14 @@ def get_model_args(cfgyml):
 class MimicTestBotCore:
     def __init__(self, top_n=10, p_thresh=0.2):
         dn = pathlib.Path(__file__).parent.resolve()
-        cfg = os.path.join(dn, "dual_zero_v04", "cfg.yml")
+        cfg = os.path.join(dn, "latest", "cfg.yml")
         cfgyml = get_config(cfg)
         self.tc_groups = cfgyml.tc_groups
         self.whiten_params = cfgyml.elo_params.whiten_params
         model_args = get_model_args(cfgyml)
         self.model = Wrapper(Transformer(model_args))
         cp = torch.load(
-            os.path.join(dn, "dual_zero_v04", "weights.ckpt"),
+            os.path.join(dn, "latest", "weights.ckpt"),
             map_location=torch.device("cpu"),
             weights_only=True,
         )
@@ -188,9 +187,11 @@ class MimicTestBotCore:
 
     def create_elo_analysis(self, elo_preds):
         wm, ws = self.whiten_params
-        ms = torch.cat([torch.tensor([wm, wm]), elo_preds[0, :, 0, 0] * ws + wm], dim=0)
+        ms = torch.cat(
+            [torch.tensor([wm, wm]), elo_preds[0, :, 0, 0] * ws + wm], dim=0)
         ss = torch.cat(
-            [torch.tensor([ws**2, ws**2]), ((elo_preds[0, :, 0, 1] ** 0.5) * ws) ** 2],
+            [torch.tensor([ws**2, ws**2]),
+             ((elo_preds[0, :, 0, 1] ** 0.5) * ws) ** 2],
             dim=0,
         )
         return ms, ss
@@ -224,7 +225,8 @@ class MimicTestBotCore:
         else:
             info = self.default_elo
 
-        probs, mvids = mv_pred[0, -1, -1, -1].softmax(dim=0).sort(descending=True)
+        probs, mvids = mv_pred[0, -1, -1, -
+                               1].softmax(dim=0).sort(descending=True)
         p = probs[: self.top_n].double() / probs[: self.top_n].double().sum()
         p[p < self.p_thresh] = 1e-8
         p = p / p.sum()
