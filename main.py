@@ -10,7 +10,7 @@ from flask import request, Flask
 from flask_cors import CORS
 
 from lib import lichess
-from lib.dual_zero_v04.config import get_config
+from lib.models import get_config
 from lib.play_game import handle_challenge, play_game, analyze_pgn
 from flask_factory import celery_init_app
 
@@ -36,7 +36,8 @@ config = get_config(os.path.join(dn, "config.yml"))
 logging_level = logging.INFO
 max_retries = config.engine.online_moves.max_retries
 
-li = lichess.Lichess(config.token, config.url, __version__, logging_level, max_retries)
+li = lichess.Lichess(config.token, config.url,
+                     __version__, logging_level, max_retries)
 user_profile = li.get_profile()
 
 active_games = set()
