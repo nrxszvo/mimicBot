@@ -164,14 +164,14 @@ def get_model_args(cfgyml):
 class MimicTestBotCore:
     def __init__(self, top_n=10, p_thresh=0.2):
         dn = pathlib.Path(__file__).parent.resolve()
-        cfg = os.path.join(dn, "latest", "cfg.yml")
+        cfg = os.path.join(dn, "models", "latest", "cfg.yml")
         cfgyml = get_config(cfg)
         self.tc_groups = cfgyml.tc_groups
         self.whiten_params = cfgyml.elo_params.whiten_params
         model_args = get_model_args(cfgyml)
         self.model = Wrapper(Transformer(model_args))
         cp = torch.load(
-            os.path.join(dn, "latest", "weights.ckpt"),
+            os.path.join(dn, "models", "latest", "weights.ckpt"),
             map_location=torch.device("cpu"),
             weights_only=True,
         )
