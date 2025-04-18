@@ -102,6 +102,12 @@ def gameStart(gameId: str):
         return {"gameStart": {"accepted": True}}
 
 
+@app.get("/resign/<gameId>")
+def resign(gameId: str):
+    li.resign(gameId)
+    return {'resign': 'complete'}
+
+
 @app.post("/analyzePgn")
 def analyzePgn():
     msg = request.json
