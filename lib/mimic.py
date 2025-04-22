@@ -140,7 +140,11 @@ class Wrapper(torch.nn.Module):
 
     def forward(self, inp):
         with torch.inference_mode():
-            return self.model(inp)
+            mv_pred, elo_pred = self.model(inp)
+            if mv_pred.ndim == 5:
+                mv_pred = mv_pred[:, :, :, :,
+                                  None].expand(-1, -1, -1, -1, 2, -1)
+            return mv_pred, elo_pred
 
 
 def get_model_args(cfgyml):
