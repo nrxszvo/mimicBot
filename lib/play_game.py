@@ -12,7 +12,7 @@ from http.client import RemoteDisconnected
 from lib import model, lichess
 from lib.lichess_types import UserProfileType
 from lib.timer import to_seconds, seconds, msec
-from lib.mimic import MimicTestBot
+from lib.mimic import MimicBot
 from lib.pgnUtils import IllegalMoveException
 import time
 import chess
@@ -107,7 +107,7 @@ def wbinc_param(board: chess.Board):
     return "winc" if board.turn == chess.WHITE else "binc"
 
 
-engine = MimicTestBot()
+engine = MimicBot()
 
 
 def analyze_pgn(pgn: io.StringIO) -> dict:

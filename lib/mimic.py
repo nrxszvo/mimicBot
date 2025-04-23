@@ -22,9 +22,9 @@ def add_move(mvid, inp):
     return torch.cat([inp, mv], dim=1)
 
 
-class MimicTestBot:
+class MimicBot:
     def __init__(self):
-        self.core = MimicTestBotCore()
+        self.core = MimicBotCore()
         self.games = {}
 
     def default_elo(self):
@@ -165,7 +165,7 @@ def get_model_args(cfgyml):
     return model_args
 
 
-class MimicTestBotCore:
+class MimicBotCore:
     def __init__(self, top_n=10, p_thresh=0.2):
         dn = pathlib.Path(__file__).parent.resolve()
         cfg = os.path.join(dn, "models", "latest", "cfg.yml")

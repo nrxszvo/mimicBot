@@ -11,8 +11,18 @@ from flask_cors import CORS
 
 from lib import lichess
 from lib.models import get_config
+from lib.models.latest import MODEL_ID
 from lib.play_game import handle_challenge, play_game, analyze_pgn
 from flask_factory import celery_init_app
+import requests
+
+
+def vm_hostname():
+    url = 'http://metadata.google.internal/computeMetadata/v1/instance/name'
+    headers = {'Metadata-Flavor': 'Google'}
+    r = requests.get(url, headers=headers)
+    print(r)
+
 
 app = Flask(__name__)
 CORS(app)
@@ -72,7 +82,12 @@ def handle_play_game(game_id: str):
 
 @app.get("/")
 def say_hello():
-    return "hello from mimicBot server"
+    return f"MimicBot {MODEL_ID} server"
+
+
+@app.get('/isAvailable')
+def isAvailable():
+    return {'available': len(li.get_ongoing_games()) < config.challenge.concurrency}
 
 
 @app.post("/challenge")

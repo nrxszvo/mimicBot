@@ -38,7 +38,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 python3 xata_frontend.py --download_cfg --cfg_id default
-if [ ! -f "lib/latest/weights.ckpt" ]; then
+if [ ! -f "lib/models/latest/weights.ckpt" ]; then
 	python3 xata_frontend.py --download_model --model_path lib/latest/weights.ckpt 
 fi
 sudo mkdir /var/www/.config
