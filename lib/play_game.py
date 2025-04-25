@@ -13,7 +13,7 @@ from lib import model, lichess
 from lib.lichess_types import UserProfileType
 from lib.timer import to_seconds, seconds, msec
 from lib.mimic import MimicBot
-from lib.pgnUtils import IllegalMoveException
+from lib.pgnutils import IllegalMoveException
 import time
 import chess
 import itertools
