@@ -4,3 +4,4 @@ run_remote.sh
 config.yml
 .xata/
 .env
+.DS_store
