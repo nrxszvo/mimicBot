@@ -18,10 +18,16 @@ import requests
 
 
 def vm_hostname():
-    url = 'http://metadata.google.internal/computeMetadata/v1/instance/name'
-    headers = {'Metadata-Flavor': 'Google'}
-    r = requests.get(url, headers=headers)
-    print(r)
+    try:
+        url = 'http://metadata.google.internal/computeMetadata/v1/instance/name'
+        headers = {'Metadata-Flavor': 'Google'}
+        r = requests.get(url, headers=headers)
+        if r.ok:
+            return r.text
+        else:
+            return 'unknown'
+    except:
+        return 'unknown'
 
 
 app = Flask(__name__)
@@ -82,7 +88,7 @@ def handle_play_game(game_id: str):
 
 @app.get("/")
 def say_hello():
-    return f"MimicBot {MODEL_ID} server"
+    return f"MimicBot model {MODEL_ID} serving from {vm_hostname()}"
 
 
 @app.get('/isAvailable')
