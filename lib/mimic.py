@@ -11,7 +11,7 @@ import torch
 from xata.client import XataClient
 from lib.models import get_config
 from lib.models.latest import ModelArgs, Transformer
-from lib.pgnUtils import STARTMV, BoardState, IllegalMoveException
+from lib.pgnutils import STARTMV, BoardState, IllegalMoveException
 from lib import model, lichess
 
 xata = XataClient()
