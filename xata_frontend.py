@@ -3,6 +3,8 @@ from xata.client import XataClient
 import wget
 import os
 from base64 import b64encode, b64decode
+from math import ceil
+import multiprocessing as mp
 
 parser = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -23,6 +25,8 @@ parser.add_argument(
     "--model_path", help="path to ckpt file for uploading or saving", default='weights.ckpt')
 parser.add_argument("--upload_cfg", action="store_true",
                     help="upload config.yml")
+parser.add_argument('--chunk_size', default=int(2e9),
+                    type=int, help='model chunk-size')
 parser.add_argument("--download_cfg", action="store_true",
                     help="download config.yml")
 parser.add_argument("--cfg_id", help="id for config file entry", default=None)
@@ -50,16 +54,29 @@ if __name__ == "__main__":
 
         print("encoding model...")
         with open(args.model_path, "rb") as f:
-            mdlzip = b64encode(f.read()).decode("utf-8")
+            mdlzip = b64encode(f.read())
 
         print("uploading model...")
+
+        mid = args.model_id
+        nparts = int(ceil(len(mdlzip)/args.chunk_size))
         rec = xata.records().upsert(
             "model",
-            args.model_id,
-            {"weights": {"name": "weights.ckpt", "base64Content": ""}},
+            mid,
+            {"weights_multi": []},
         )
-        rec = xata.files().put("model", args.model_id, "weights", mdlzip)
         print(rec)
+        for i in range(nparts):
+            pid = f'{mid}_{i+1}_of_{nparts}'
+            start = int(i*args.chunk_size)
+            end = min(int((i+1)*args.chunk_size), len(mdlzip))
+
+            try:
+                rec = xata.files().put_item(
+                    "model", mid, "weights_multi", pid, mdlzip[start:end])
+                print(rec)
+            except Exception as e:
+                print(e)
 
     elif args.download_model:
         if args.model_id is None:
@@ -72,10 +89,38 @@ if __name__ == "__main__":
             model_id = args.model_id
         print(model_id)
         rec = xata.records().get("model", model_id,
-                                 columns=["weights.signedUrl"])
-        fn = wget.download(rec["weights"]["signedUrl"])
-        with open(fn, "rb") as f:
-            mdl = b64decode(f.read())
-        os.remove(fn)
+                                 columns=["weights.signedUrl", 'weights_multi.signedUrl'])
+
+        def dlpart(rec, pid=None, q=None):
+            fn = wget.download(rec["signedUrl"])
+            with open(fn, "rb") as f:
+                part = f.read()
+            os.remove(fn)
+            if q:
+                q.put((part, pid))
+            else:
+                return part
+
+        if 'weights' in rec:
+            mdl = b64decode(dlpart(rec['weights']))
+        else:
+            procs = []
+            q = mp.Queue()
+            for i, part in enumerate(rec['weights_multi']):
+                p = mp.Process(target=dlpart, args=(part, i, q))
+                p.start()
+                procs.append(p)
+            nparts = len(rec['weights_multi'])
+            nfinished = 0
+            parts = [None]*nparts
+            while nfinished < nparts:
+                part, pid = q.get()
+                parts[pid] = part
+                nfinished += 1
+            mdl = bytes()
+            for part in parts:
+                mdl += part
+            mdl = b64decode(mdl)
+
         with open(args.model_path, "wb") as f:
             f.write(mdl)
