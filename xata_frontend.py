@@ -1,6 +1,5 @@
 import argparse
 from xata.client import XataClient
-import wget
 import os
 from base64 import b64encode, b64decode
 from math import ceil
@@ -106,7 +105,7 @@ def main():
         procs = []
         for i, url in enumerate(urls):
             fn = f'part_{i}.tmp'
-            p = Popen(['wget', url, '-O', fn])
+            p = Popen(['wget', url, '-O', fn, '-nv'])
             procs.append((p, fn))
 
         parts = [bytes() for _ in procs]
