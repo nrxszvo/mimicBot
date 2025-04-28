@@ -144,6 +144,9 @@ class Wrapper(torch.nn.Module):
             if mv_pred.ndim == 5:
                 mv_pred = mv_pred[:, :, :, :,
                                   None].expand(-1, -1, -1, -1, 2, -1)
+            elif mv_pred.shape[4] == 1:
+                mv_pred = mv_pred.expand(-1, -1, -1, -1, 2, -1)
+
             return mv_pred, elo_pred
 
 
