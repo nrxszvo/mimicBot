@@ -4,7 +4,7 @@ import wget
 import os
 from base64 import b64encode, b64decode
 from math import ceil
-import multiprocessing as mp
+from subprocess import Popen
 
 parser = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -33,7 +33,8 @@ parser.add_argument("--cfg_id", help="id for config file entry", default=None)
 parser.add_argument(
     "--cfg_path", help="path to config yml for uploading or saving", default="config.yml")
 
-if __name__ == "__main__":
+
+def main():
     args = parser.parse_args()
     xata = XataClient()
 
@@ -81,46 +82,49 @@ if __name__ == "__main__":
     elif args.download_model:
         if args.model_id is None:
             resp = xata.data().query('model', {"filter": {"current": True}})
-            print(resp)
             assert len(
                 resp['records']) == 1, 'zero or multiple records with current=True'
             model_id = resp['records'][0]['id']
         else:
             model_id = args.model_id
         print(model_id)
+
         rec = xata.records().get("model", model_id,
                                  columns=["weights.signedUrl", 'weights_multi.signedUrl'])
 
-        def dlpart(rec, pid=None, q=None):
-            fn = wget.download(rec["signedUrl"])
+        if 'weights' in rec:
+            urls = [rec['weights']['signedUrl']]
+        else:
+            nparts = len(rec['weights_multi'])
+            pids = [f'{model_id}_{i+1}_of_{nparts}' for i in range(nparts)]
+            rec = xata.records().update('model', model_id, {
+                'weights_multi': [{'id': pid, 'signedUrlTimeout': 6000} for pid in pids]})
+            rec = xata.records().get("model", model_id,
+                                     columns=['weights_multi.signedUrl'])
+            urls = [part['signedUrl'] for part in rec['weights_multi']]
+
+        procs = []
+        for i, url in enumerate(urls):
+            fn = f'part_{i}.tmp'
+            p = Popen(['wget', url, '-O', fn])
+            procs.append((p, fn))
+
+        parts = [bytes() for _ in procs]
+        for i, (p, fn) in enumerate(procs):
+            p.wait()
             with open(fn, "rb") as f:
                 part = f.read()
             os.remove(fn)
-            if q:
-                q.put((part, pid))
-            else:
-                return part
+            parts[i] = part
 
-        if 'weights' in rec:
-            mdl = b64decode(dlpart(rec['weights']))
-        else:
-            procs = []
-            q = mp.Queue()
-            for i, part in enumerate(rec['weights_multi']):
-                p = mp.Process(target=dlpart, args=(part, i, q))
-                p.start()
-                procs.append(p)
-            nparts = len(rec['weights_multi'])
-            nfinished = 0
-            parts = [None]*nparts
-            while nfinished < nparts:
-                part, pid = q.get()
-                parts[pid] = part
-                nfinished += 1
-            mdl = bytes()
-            for part in parts:
-                mdl += part
-            mdl = b64decode(mdl)
+        mdl = bytes()
+        for part in parts:
+            mdl += part
+        mdl = b64decode(mdl)
 
         with open(args.model_path, "wb") as f:
             f.write(mdl)
+
+
+if __name__ == "__main__":
+    main()
